@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo | default('Registro de Pedido') }}{% endblock %}
+{% block content %}
+<h2 class="mb-4">{{ titulo | default('Registro de Pedido') }}</h2>
+<form method="post" id="pedido-form">
+    <div id="productos-container"></div>
+    <button type="button" class="btn btn-secondary mt-2" onclick="agregarProducto()">Agregar Producto</button>
+    <button type="submit" class="btn btn-primary mt-2">Enviar Pedido</button>
+</form>
+
+<script>
+const PRODUCTS = {{ products | tojson }};
+
+function crearSelectProducto(index) {
+    const select = document.createElement('select');
+    select.name = 'productos';
+    select.className = 'form-select mb-2';
+    select.onchange = (e) => actualizarTamanos(e.target, index);
+
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = 'Seleccione producto';
+    select.appendChild(defaultOption);
+
+    Object.keys(PRODUCTS).forEach(key => {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = PRODUCTS[key].label;
+        select.appendChild(opt);
+    });
+    return select;
+}
+
+function crearCantidadInput() {
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.name = 'cantidades';
+    input.className = 'form-control mb-2';
+    input.placeholder = 'Cantidad';
+    return input;
+}
+
+function crearSelectTamano() {
+    const select = document.createElement('select');
+    select.name = 'tamanos';
+    select.className = 'form-select mb-2';
+    return select;
+}
+
+function actualizarTamanos(selectProducto, index) {
+    const value = selectProducto.value;
+    const selectTamano = document.getElementById('tamano-' + index);
+    selectTamano.innerHTML = '';
+    if (PRODUCTS[value]) {
+        PRODUCTS[value].sizes.forEach(size => {
+            const opt = document.createElement('option');
+            opt.value = size;
+            opt.textContent = size;
+            selectTamano.appendChild(opt);
+        });
+    }
+}
+
+let productoIndex = 0;
+function agregarProducto() {
+    const container = document.getElementById('productos-container');
+    const row = document.createElement('div');
+    row.className = 'mb-3';
+
+    const selectProducto = crearSelectProducto(productoIndex);
+    const cantidadInput = crearCantidadInput();
+    const selectTamano = crearSelectTamano();
+    selectTamano.id = 'tamano-' + productoIndex;
+
+    row.appendChild(selectProducto);
+    row.appendChild(cantidadInput);
+    row.appendChild(selectTamano);
+    container.appendChild(row);
+    productoIndex += 1;
+}
+
+document.addEventListener('DOMContentLoaded', agregarProducto);
+</script>
+{% endblock %}
