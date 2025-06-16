@@ -25,3 +25,5 @@ Abrir en el navegador `http://localhost:8000`.
 
 La aplicación cuenta con un formulario para registrar pedidos que también se
 utiliza en el módulo de atención al cliente.
+Desde la interfaz de pedidos ahora es posible agregar múltiples adiciones a un
+producto y eliminar tanto adiciones individuales como productos completos.
