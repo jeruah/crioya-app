@@ -9,15 +9,15 @@ app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Dummy product data
+# Dummy product data with emojis in the labels
 PRODUCTS = {
     "papa_criolla": {
         "sizes": ["pequeña", "mediana", "grande"],
-        "label": "Papa Criolla"
+        "label": "🥔 Papa Criolla",
     },
     "papa_sabanera": {
         "sizes": ["1kg", "2kg", "5kg"],
-        "label": "Papa Sabanera"
+        "label": "🥔 Papa Sabanera",
     },
 }
 
@@ -49,8 +49,11 @@ async def _procesar_pedido(
     """Genera la respuesta con el resumen del pedido."""
     pedido = []
     for producto, cantidad, tamano in zip(productos, cantidades, tamanos):
+        if cantidad <= 0:
+            continue
+        label = PRODUCTS.get(producto, {}).get("label", producto)
         pedido.append({
-            "producto": producto,
+            "producto": label,
             "cantidad": cantidad,
             "tamano": tamano,
         })
@@ -101,4 +104,13 @@ async def informe(request: Request):
     return templates.TemplateResponse(
         "placeholder.html",
         {"request": request, "titulo": "Informe Financiero"},
+    )
+
+
+@app.get("/cocina", response_class=HTMLResponse)
+async def cocina(request: Request):
+    """Interfaz de cocina temporal."""
+    return templates.TemplateResponse(
+        "cocina.html",
+        {"request": request, "titulo": "Interfaz de Cocina"},
     )

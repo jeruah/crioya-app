@@ -3,32 +3,49 @@
 {% block content %}
 <h2 class="mb-4">{{ titulo | default('Registro de Pedido') }}</h2>
 <form method="post" id="pedido-form">
+    <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" id="domicilio-check" name="domicilio">
+        <label class="form-check-label" for="domicilio-check">Entrega a domicilio</label>
+    </div>
+    <input type="text" class="form-control mb-2" id="direccion" name="direccion" placeholder="Direcci\u00f3n" disabled>
     <div id="productos-container"></div>
     <button type="button" class="btn btn-secondary mt-2" onclick="agregarProducto()">Agregar Producto</button>
     <button type="submit" class="btn btn-primary mt-2">Enviar Pedido</button>
+    <datalist id="product-list">
+    {% for key, data in products.items() %}
+        <option value="{{ data.label }}"></option>
+    {% endfor %}
+    </datalist>
 </form>
 
 <script>
 const PRODUCTS = {{ products | tojson }};
+const PRODUCT_KEYS = {};
+Object.keys(PRODUCTS).forEach(key => {
+    PRODUCT_KEYS[PRODUCTS[key].label] = key;
+});
 
-function crearSelectProducto(index) {
-    const select = document.createElement('select');
-    select.name = 'productos';
-    select.className = 'form-select mb-2';
-    select.onchange = (e) => actualizarTamanos(e.target, index);
+function crearProductoInput(index) {
+    const input = document.createElement('input');
+    input.setAttribute('list', 'product-list');
+    input.className = 'form-control mb-2';
+    input.placeholder = 'Buscar producto';
+    input.onchange = () => seleccionarProducto(input, index);
+    return input;
+}
 
-    const defaultOption = document.createElement('option');
-    defaultOption.value = '';
-    defaultOption.textContent = 'Seleccione producto';
-    select.appendChild(defaultOption);
+function crearProductoHidden(index) {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'productos';
+    input.id = 'producto-key-' + index;
+    return input;
+}
 
-    Object.keys(PRODUCTS).forEach(key => {
-        const opt = document.createElement('option');
-        opt.value = key;
-        opt.textContent = PRODUCTS[key].label;
-        select.appendChild(opt);
-    });
-    return select;
+function seleccionarProducto(input, index) {
+    const key = PRODUCT_KEYS[input.value] || '';
+    document.getElementById('producto-key-' + index).value = key;
+    actualizarTamanos(key, index);
 }
 
 function crearCantidadInput() {
@@ -37,6 +54,7 @@ function crearCantidadInput() {
     input.name = 'cantidades';
     input.className = 'form-control mb-2';
     input.placeholder = 'Cantidad';
+    input.min = 1;
     return input;
 }
 
@@ -47,12 +65,11 @@ function crearSelectTamano() {
     return select;
 }
 
-function actualizarTamanos(selectProducto, index) {
-    const value = selectProducto.value;
+function actualizarTamanos(productKey, index) {
     const selectTamano = document.getElementById('tamano-' + index);
     selectTamano.innerHTML = '';
-    if (PRODUCTS[value]) {
-        PRODUCTS[value].sizes.forEach(size => {
+    if (PRODUCTS[productKey]) {
+        PRODUCTS[productKey].sizes.forEach(size => {
             const opt = document.createElement('option');
             opt.value = size;
             opt.textContent = size;
@@ -67,18 +84,50 @@ function agregarProducto() {
     const row = document.createElement('div');
     row.className = 'mb-3';
 
-    const selectProducto = crearSelectProducto(productoIndex);
+    const inputProducto = crearProductoInput(productoIndex);
+    const hiddenProducto = crearProductoHidden(productoIndex);
     const cantidadInput = crearCantidadInput();
     const selectTamano = crearSelectTamano();
     selectTamano.id = 'tamano-' + productoIndex;
 
-    row.appendChild(selectProducto);
+    row.appendChild(inputProducto);
+    row.appendChild(hiddenProducto);
     row.appendChild(cantidadInput);
     row.appendChild(selectTamano);
     container.appendChild(row);
     productoIndex += 1;
 }
 
-document.addEventListener('DOMContentLoaded', agregarProducto);
+document.addEventListener('DOMContentLoaded', () => {
+    agregarProducto();
+    const domicilioCheck = document.getElementById('domicilio-check');
+    const direccionInput = document.getElementById('direccion');
+    domicilioCheck.addEventListener('change', () => {
+        if (domicilioCheck.checked) {
+            direccionInput.disabled = false;
+            direccionInput.required = true;
+        } else {
+            direccionInput.disabled = true;
+            direccionInput.required = false;
+            direccionInput.value = '';
+        }
+    });
+
+    document.getElementById('pedido-form').addEventListener('submit', (e) => {
+        const cantidades = document.querySelectorAll('input[name="cantidades"]');
+        for (const input of cantidades) {
+            if (parseInt(input.value) <= 0 || isNaN(parseInt(input.value))) {
+                alert('Las cantidades deben ser mayores que cero');
+                e.preventDefault();
+                return;
+            }
+        }
+        if (domicilioCheck.checked && direccionInput.value.trim() === '') {
+            alert('Ingrese una dirección válida');
+            e.preventDefault();
+            return;
+        }
+    });
+});
 </script>
 {% endblock %}
