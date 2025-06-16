@@ -98,37 +98,61 @@ function agregarProducto() {
     productoIndex += 1;
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    agregarProducto();
-    const domicilioCheck = document.getElementById('domicilio-check');
-    const direccionInput = document.getElementById('direccion');
-    const productosContainer = document.getElementById('productos-container');
-    domicilioCheck.addEventListener('change', () => {
-        if (domicilioCheck.checked) {
-            direccionInput.disabled = false;
-            direccionInput.required = true;
-        } else {
-            direccionInput.disabled = true;
-            direccionInput.required = false;
-            direccionInput.value = '';
-        }
-    });
+    document.addEventListener('DOMContentLoaded', () => {
+        agregarProducto();
 
-    document.getElementById('pedido-form').addEventListener('submit', (e) => {
-        const cantidades = document.querySelectorAll('input[name="cantidades"]');
-        for (const input of cantidades) {
-            if (parseInt(input.value) <= 0 || isNaN(parseInt(input.value))) {
-                alert('Las cantidades deben ser mayores que cero');
+        const domicilioCheck = document.getElementById('domicilio-check');
+        const direccionInput = document.getElementById('direccion');
+        const form = document.getElementById('pedido-form');
+
+        function toggleForm(disabled) {
+            form.querySelectorAll('input, select, button').forEach(el => {
+                if (el !== direccionInput && el !== domicilioCheck) {
+                    el.disabled = disabled;
+                }
+            });
+        }
+
+        function direccionValida() {
+            return direccionInput.value.trim().length > 5;
+        }
+
+        function validarDireccion() {
+            if (domicilioCheck.checked) {
+                toggleForm(!direccionValida());
+            }
+        }
+
+        domicilioCheck.addEventListener('change', () => {
+            if (domicilioCheck.checked) {
+                direccionInput.disabled = false;
+                direccionInput.required = true;
+                validarDireccion();
+            } else {
+                direccionInput.disabled = true;
+                direccionInput.required = false;
+                direccionInput.value = '';
+                toggleForm(false);
+            }
+        });
+
+        direccionInput.addEventListener('input', validarDireccion);
+
+        document.getElementById('pedido-form').addEventListener('submit', (e) => {
+            const cantidades = document.querySelectorAll('input[name="cantidades"]');
+            for (const input of cantidades) {
+                if (parseInt(input.value) <= 0 || isNaN(parseInt(input.value))) {
+                    alert('Las cantidades deben ser mayores que cero');
+                    e.preventDefault();
+                    return;
+                }
+            }
+            if (domicilioCheck.checked && !direccionValida()) {
+                alert('Ingrese una dirección válida');
                 e.preventDefault();
                 return;
             }
-        }
-        if (domicilioCheck.checked && direccionInput.value.trim() === '') {
-            alert('Ingrese una dirección válida');
-            e.preventDefault();
-            return;
-        }
+        });
     });
-});
 </script>
 {% endblock %}
