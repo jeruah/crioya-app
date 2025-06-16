@@ -71,13 +71,65 @@ function crearCantidadInput() {
     return input;
 }
 
-function crearAdicionInput() {
+function crearBotonEliminar(callback) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-outline-danger btn-sm';
+    btn.textContent = 'Eliminar';
+    btn.onclick = callback;
+    return btn;
+}
+
+function crearAdicionFila(actualizar) {
+    const wrap = document.createElement('div');
+    wrap.className = 'input-group mb-2 adicion-item';
+
     const input = document.createElement('input');
     input.setAttribute('list', 'adiciones-list');
-    input.className = 'form-control mb-2';
-    input.name = 'adiciones';
+    input.className = 'form-control';
     input.placeholder = 'Adici\u00f3n';
-    return input;
+    input.oninput = actualizar;
+
+    const btn = crearBotonEliminar(() => {
+        wrap.remove();
+        actualizar();
+    });
+
+    wrap.appendChild(input);
+    wrap.appendChild(btn);
+    return wrap;
+}
+
+function crearContenedorAdiciones(index) {
+    const container = document.createElement('div');
+    container.className = 'mb-2 adiciones-container';
+    container.dataset.index = index;
+
+    const hidden = document.createElement('input');
+    hidden.type = 'hidden';
+    hidden.name = 'adiciones';
+    hidden.id = 'adiciones-' + index;
+
+    function actualizar() {
+        const values = Array.from(container.querySelectorAll('input[list="adiciones-list"]'))
+            .map(i => i.value.trim())
+            .filter(v => v);
+        hidden.value = values.join(',');
+    }
+
+    container.updateHidden = actualizar;
+
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'btn btn-secondary btn-sm mb-2';
+    addBtn.textContent = 'Agregar Adici\u00f3n';
+    addBtn.onclick = () => {
+        container.insertBefore(crearAdicionFila(actualizar), addBtn);
+    };
+
+    container.appendChild(hidden);
+    container.appendChild(addBtn);
+    return container;
 }
 
 function crearDetalleTextarea() {
@@ -112,17 +164,21 @@ let productoIndex = 0;
 function agregarProducto() {
     const container = document.getElementById('productos-container');
     const row = document.createElement('div');
-    row.className = 'mb-3';
+    row.className = 'mb-3 border p-2 position-relative';
+
+    const removeBtn = crearBotonEliminar(() => row.remove());
+    removeBtn.classList.add('position-absolute', 'top-0', 'end-0');
 
     const inputProducto = crearProductoInput(productoIndex);
     const hiddenProducto = crearProductoHidden(productoIndex);
     const cantidadInput = crearCantidadInput();
     const selectTamano = crearSelectTamano();
-    const adicionInput = crearAdicionInput();
+    const adicionesContainer = crearContenedorAdiciones(productoIndex);
     const detalleTextarea = crearDetalleTextarea();
 
     selectTamano.id = 'tamano-' + productoIndex;
 
+    row.appendChild(removeBtn);
     row.appendChild(crearLabel('Producto'));
     row.appendChild(inputProducto);
     row.appendChild(hiddenProducto);
@@ -130,8 +186,8 @@ function agregarProducto() {
     row.appendChild(cantidadInput);
     row.appendChild(crearLabel('Tama\u00f1o'));
     row.appendChild(selectTamano);
-    row.appendChild(crearLabel('Adici\u00f3n'));
-    row.appendChild(adicionInput);
+    row.appendChild(crearLabel('Adiciones'));
+    row.appendChild(adicionesContainer);
     row.appendChild(crearLabel('Detalle'));
     row.appendChild(detalleTextarea);
 
@@ -180,6 +236,7 @@ function agregarProducto() {
         direccionInput.addEventListener('input', validarDireccion);
 
         document.getElementById('pedido-form').addEventListener('submit', (e) => {
+            document.querySelectorAll(".adiciones-container").forEach(c => { if (typeof c.updateHidden === "function") { c.updateHidden(); } });
             const cantidades = document.querySelectorAll('input[name="cantidades"]');
             for (const input of cantidades) {
                 if (parseInt(input.value) <= 0 || isNaN(parseInt(input.value))) {
