@@ -90,7 +90,6 @@ MENU_FORMULARIO = {
     ],
 }
 
-
 def _build_products(menu: dict) -> dict:
     """Convierte el menú en el formato utilizado por el formulario."""
     productos = {}
@@ -105,6 +104,7 @@ ADICIONES = [i["nombre"] for i in MENU_FORMULARIO.get("Adiciones", [])]
 
 
 PRODUCTS = _build_products(MENU_FORMULARIO)
+
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
