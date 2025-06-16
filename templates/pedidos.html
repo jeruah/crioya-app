@@ -102,6 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
     agregarProducto();
     const domicilioCheck = document.getElementById('domicilio-check');
     const direccionInput = document.getElementById('direccion');
+    const productosContainer = document.getElementById('productos-container');
     domicilioCheck.addEventListener('change', () => {
         if (domicilioCheck.checked) {
             direccionInput.disabled = false;

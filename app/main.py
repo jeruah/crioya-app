@@ -29,17 +29,6 @@ async def index(request: Request):
 async def main_page(request: Request):
     return templates.TemplateResponse("main.html", {"request": request})
 
-@app.get("/pedidos", response_class=HTMLResponse)
-async def pedidos_form(request: Request):
-    return templates.TemplateResponse(
-        "pedidos.html",
-        {
-            "request": request,
-            "products": PRODUCTS,
-            "titulo": "Registro de Pedido",
-        },
-    )
-
 async def _procesar_pedido(
     request: Request,
     productos: List[str],
@@ -61,15 +50,6 @@ async def _procesar_pedido(
         "pedido_resumen.html", {"request": request, "pedido": pedido}
     )
 
-
-@app.post("/pedidos", response_class=HTMLResponse)
-async def submit_pedido(
-    request: Request,
-    productos: List[str] = Form(...),
-    cantidades: List[int] = Form(...),
-    tamanos: List[str] = Form(...),
-):
-    return await _procesar_pedido(request, productos, cantidades, tamanos)
 
 @app.get("/atencion", response_class=HTMLResponse)
 async def atencion(request: Request):
