@@ -7,6 +7,7 @@
         <input class="form-check-input" type="checkbox" id="domicilio-check" name="domicilio">
         <label class="form-check-label" for="domicilio-check">Entrega a domicilio</label>
     </div>
+    <label for="direccion" class="form-label">Direcci\u00f3n</label>
     <input type="text" class="form-control mb-2" id="direccion" name="direccion" placeholder="Direcci\u00f3n" disabled>
     <div id="productos-container"></div>
     <button type="button" class="btn btn-secondary mt-2" onclick="agregarProducto()">Agregar Producto</button>
@@ -14,6 +15,11 @@
     <datalist id="product-list">
     {% for key, data in products.items() %}
         <option value="{{ data.label }}"></option>
+    {% endfor %}
+    </datalist>
+    <datalist id="adiciones-list">
+    {% for nombre in adiciones %}
+        <option value="{{ nombre }}"></option>
     {% endfor %}
     </datalist>
 </form>
@@ -24,6 +30,13 @@ const PRODUCT_KEYS = {};
 Object.keys(PRODUCTS).forEach(key => {
     PRODUCT_KEYS[PRODUCTS[key].label] = key;
 });
+
+function crearLabel(texto) {
+    const label = document.createElement('label');
+    label.textContent = texto;
+    label.className = 'form-label';
+    return label;
+}
 
 function crearProductoInput(index) {
     const input = document.createElement('input');
@@ -58,6 +71,23 @@ function crearCantidadInput() {
     return input;
 }
 
+function crearAdicionInput() {
+    const input = document.createElement('input');
+    input.setAttribute('list', 'adiciones-list');
+    input.className = 'form-control mb-2';
+    input.name = 'adiciones';
+    input.placeholder = 'Adici\u00f3n';
+    return input;
+}
+
+function crearDetalleTextarea() {
+    const textarea = document.createElement('textarea');
+    textarea.name = 'detalles';
+    textarea.className = 'form-control mb-2';
+    textarea.placeholder = 'Detalle del producto';
+    return textarea;
+}
+
 function crearSelectTamano() {
     const select = document.createElement('select');
     select.name = 'tamanos';
@@ -88,12 +118,23 @@ function agregarProducto() {
     const hiddenProducto = crearProductoHidden(productoIndex);
     const cantidadInput = crearCantidadInput();
     const selectTamano = crearSelectTamano();
+    const adicionInput = crearAdicionInput();
+    const detalleTextarea = crearDetalleTextarea();
+
     selectTamano.id = 'tamano-' + productoIndex;
 
+    row.appendChild(crearLabel('Producto'));
     row.appendChild(inputProducto);
     row.appendChild(hiddenProducto);
+    row.appendChild(crearLabel('Cantidad'));
     row.appendChild(cantidadInput);
+    row.appendChild(crearLabel('Tama\u00f1o'));
     row.appendChild(selectTamano);
+    row.appendChild(crearLabel('Adici\u00f3n'));
+    row.appendChild(adicionInput);
+    row.appendChild(crearLabel('Detalle'));
+    row.appendChild(detalleTextarea);
+
     container.appendChild(row);
     productoIndex += 1;
 }
@@ -106,7 +147,7 @@ function agregarProducto() {
         const form = document.getElementById('pedido-form');
 
         function toggleForm(disabled) {
-            form.querySelectorAll('input, select, button').forEach(el => {
+            form.querySelectorAll('input, select, textarea, button').forEach(el => {
                 if (el !== direccionInput && el !== domicilioCheck) {
                     el.disabled = disabled;
                 }
@@ -115,7 +156,7 @@ function agregarProducto() {
 
         function direccionValida() {
             return direccionInput.value.trim().length > 5;
-        }
+
 
         function validarDireccion() {
             if (domicilioCheck.checked) {

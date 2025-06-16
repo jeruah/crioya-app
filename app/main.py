@@ -90,17 +90,21 @@ MENU_FORMULARIO = {
     ],
 }
 
-
 def _build_products(menu: dict) -> dict:
     """Convierte el menú en el formato utilizado por el formulario."""
     productos = {}
     for categoria in menu.values():
         for item in categoria:
-            productos[item["id"]] = {"label": item["nombre"], "sizes": ["único"]}
+            productos[item["id"]] = {"label": item["nombre"], "sizes": ["base"]}
     return productos
 
 
+# Lista sencilla de adiciones para el formulario
+ADICIONES = [i["nombre"] for i in MENU_FORMULARIO.get("Adiciones", [])]
+
+
 PRODUCTS = _build_products(MENU_FORMULARIO)
+
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
@@ -115,10 +119,14 @@ async def _procesar_pedido(
     productos: List[str],
     cantidades: List[int],
     tamanos: List[str],
+    adiciones: List[str],
+    detalles: List[str],
 ):
     """Genera la respuesta con el resumen del pedido."""
     pedido = []
-    for producto, cantidad, tamano in zip(productos, cantidades, tamanos):
+    for producto, cantidad, tamano, adicion, detalle in zip(
+        productos, cantidades, tamanos, adiciones, detalles
+    ):
         if cantidad <= 0:
             continue
         label = PRODUCTS.get(producto, {}).get("label", producto)
@@ -126,6 +134,8 @@ async def _procesar_pedido(
             "producto": label,
             "cantidad": cantidad,
             "tamano": tamano,
+            "adicion": adicion,
+            "detalle": detalle,
         })
     return templates.TemplateResponse(
         "pedido_resumen.html", {"request": request, "pedido": pedido}
@@ -139,6 +149,7 @@ async def atencion(request: Request):
         {
             "request": request,
             "products": PRODUCTS,
+            "adiciones": ADICIONES,
             "titulo": "Atenci\u00f3n al Cliente",
         },
     )
@@ -150,8 +161,12 @@ async def submit_atencion(
     productos: List[str] = Form(...),
     cantidades: List[int] = Form(...),
     tamanos: List[str] = Form(...),
+    adiciones: List[str] = Form(...),
+    detalles: List[str] = Form(...),
 ):
-    return await _procesar_pedido(request, productos, cantidades, tamanos)
+    return await _procesar_pedido(
+        request, productos, cantidades, tamanos, adiciones, detalles
+    )
 
 @app.get("/facturas", response_class=HTMLResponse)
 async def facturas(request: Request):

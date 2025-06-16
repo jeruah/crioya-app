@@ -6,6 +6,8 @@
     {% for item in pedido %}
     <li class="list-group-item">
         {{ item.producto }} - {{ item.tamano }} - Cantidad: {{ item.cantidad }}
+        {% if item.adicion %} | Adición: {{ item.adicion }}{% endif %}
+        {% if item.detalle %} | Detalle: {{ item.detalle }}{% endif %}
     </li>
     {% endfor %}
 </ul>
