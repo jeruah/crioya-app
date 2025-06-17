@@ -10,7 +10,8 @@ import certifi
 app = FastAPI()
 
 templates = Jinja2Templates(directory="templates")
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# descomentar si se desea servir archivos estáticos
+#app.mount("/static", StaticFiles(directory="static"), name="static")
 ctx = ssl.create_default_context(cafile=certifi.where())
 # Carta completa de productos
 MENU_FORMULARIO = {
