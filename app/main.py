@@ -3,15 +3,17 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from typing import List
-from geopy.geocoders import Nominatim
+from geopy.geocoders import OpenCage
 from geopy.distance import geodesic
 import ssl
 import certifi
 app = FastAPI()
 
 templates = Jinja2Templates(directory="templates")
+
 # descomentar si se desea servir archivos estáticos
-#app.mount("/static", StaticFiles(directory="static"), name="static")
+# app.mount("/static", StaticFiles(directory="static"), name="static")
+
 ctx = ssl.create_default_context(cafile=certifi.where())
 # Carta completa de productos
 MENU_FORMULARIO = {
@@ -94,6 +96,8 @@ MENU_FORMULARIO = {
     ],
 }
 
+LOCATION_KEY = "2b67a12237c84dbdbc22fdf65c4fa00b"
+
 def _build_products(menu: dict) -> dict:
     """Convierte el menú en el formato utilizado por el formulario."""
     productos = {}
@@ -110,8 +114,8 @@ ADICIONES = [i["nombre"] for i in MENU_FORMULARIO.get("Adiciones", [])]
 PRODUCTS = _build_products(MENU_FORMULARIO)
 
 # Coordenadas y radio de cobertura
-LOCAL_COORDS = (4.601, -74.070)  # Coordenadas del local
-RADIO_COBERTURA = 2000  # 2 km
+LOCAL_COORDS = (6.172720899383694, -75.33313859325239)  # Coordenadas del local
+RADIO_COBERTURA = 50000  # 6 km de cobertura
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
@@ -201,7 +205,7 @@ async def cocina(request: Request):
 
 @app.post('/zona')
 async def zona(direccion: str = Form(...)):
-    geolocator = Nominatim(user_agent="crioya_app_jeruah@unal.edu.co", ssl_context=ctx)
+    geolocator = OpenCage(LOCATION_KEY, timeout=10, ssl_context=ctx)
     location = geolocator.geocode(direccion, exactly_one=True)
     if not location:
         return {"response": "bad", "mensaje": "Dirección no encontrada"}

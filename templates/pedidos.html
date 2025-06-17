@@ -7,8 +7,10 @@
         <input class="form-check-input" type="checkbox" id="domicilio-check" name="domicilio">
         <label class="form-check-label" for="domicilio-check">Entrega a domicilio</label>
     </div>
-    <label for="direccion" class="form-label">Direcci\u00f3n</label>
-    <input type="text" class="form-control mb-2" id="direccion" name="direccion" placeholder="Direcci\u00f3n" disabled>
+    <label for="direccion" class="form-label">Dirección</label>
+    <input type="text" class="form-control mb-2" id="direccion" name="direccion" placeholder="Dirección" disabled>
+    <button type="button" class="btn btn-info btn-sm mb-2" id="validar-direccion-btn" disabled>Validar dirección</button>
+    <div id="direccion-mensaje" class="mb-2"></div>
     <div id="productos-container"></div>
     <button type="button" class="btn btn-secondary mt-2" onclick="agregarProducto()">Agregar Producto</button>
     <button type="submit" class="btn btn-primary mt-2">Enviar Pedido</button>
@@ -87,7 +89,7 @@ function crearAdicionFila(actualizar) {
     const input = document.createElement('input');
     input.setAttribute('list', 'adiciones-list');
     input.className = 'form-control';
-    input.placeholder = 'Adici\u00f3n';
+    input.placeholder = 'Adición';
     input.oninput = actualizar;
 
     const btn = crearBotonEliminar(() => {
@@ -122,7 +124,7 @@ function crearContenedorAdiciones(index) {
     const addBtn = document.createElement('button');
     addBtn.type = 'button';
     addBtn.className = 'btn btn-secondary btn-sm mb-2';
-    addBtn.textContent = 'Agregar Adici\u00f3n';
+    addBtn.textContent = 'Agregar Adición';
     addBtn.onclick = () => {
         container.insertBefore(crearAdicionFila(actualizar), addBtn);
     };
@@ -184,7 +186,7 @@ function agregarProducto() {
     row.appendChild(hiddenProducto);
     row.appendChild(crearLabel('Cantidad'));
     row.appendChild(cantidadInput);
-    row.appendChild(crearLabel('Tama\u00f1o'));
+    row.appendChild(crearLabel('Tamaño'));
     row.appendChild(selectTamano);
     row.appendChild(crearLabel('Adiciones'));
     row.appendChild(adicionesContainer);
@@ -195,62 +197,104 @@ function agregarProducto() {
     productoIndex += 1;
 }
 
-    document.addEventListener('DOMContentLoaded', () => {
-        agregarProducto();
+document.addEventListener('DOMContentLoaded', () => {
+    agregarProducto();
 
-        const domicilioCheck = document.getElementById('domicilio-check');
-        const direccionInput = document.getElementById('direccion');
-        const form = document.getElementById('pedido-form');
+    const domicilioCheck = document.getElementById('domicilio-check');
+    const direccionInput = document.getElementById('direccion');
+    const validarBtn = document.getElementById('validar-direccion-btn');
+    const mensajeDiv = document.getElementById('direccion-mensaje');
+    const form = document.getElementById('pedido-form');
 
-        function toggleForm(disabled) {
-            form.querySelectorAll('input, select, textarea, button').forEach(el => {
-                if (el !== direccionInput && el !== domicilioCheck) {
-                    el.disabled = disabled;
-                }
-            });
-        }
-
-        function direccionValida() {
-            return direccionInput.value.trim().length > 5;
-        }
-
-        function validarDireccion() {
-            if (domicilioCheck.checked) {
-                toggleForm(!direccionValida());
-            }
-        }
-
-        domicilioCheck.addEventListener('change', () => {
-            if (domicilioCheck.checked) {
-                direccionInput.disabled = false;
-                direccionInput.required = true;
-                validarDireccion();
-            } else {
-                direccionInput.disabled = true;
-                direccionInput.required = false;
-                direccionInput.value = '';
-                toggleForm(false);
+    function toggleForm(disabled) {
+        form.querySelectorAll('input, select, textarea, button').forEach(el => {
+            if (![direccionInput, domicilioCheck, validarBtn].includes(el)) {
+                el.disabled = disabled;
             }
         });
+    }
 
-        direccionInput.addEventListener('input', validarDireccion);
+    // Habilita el botón de validar solo si hay texto suficiente
+    direccionInput.addEventListener('input', () => {
+        validarBtn.disabled = direccionInput.value.trim().length < 5;
+        mensajeDiv.textContent = '';
+        mensajeDiv.style.color = '';
+        toggleForm(true);
+    });
 
-        document.getElementById('pedido-form').addEventListener('submit', (e) => {
-            document.querySelectorAll(".adiciones-container").forEach(c => { if (typeof c.updateHidden === "function") { c.updateHidden(); } });
-            const cantidades = document.querySelectorAll('input[name="cantidades"]');
-            for (const input of cantidades) {
-                if (parseInt(input.value) <= 0 || isNaN(parseInt(input.value))) {
-                    alert('Las cantidades deben ser mayores que cero');
-                    e.preventDefault();
-                    return;
-                }
+    // Validación de dirección solo al hacer click en el botón
+    validarBtn.addEventListener('click', async () => {
+        const direccion = direccionInput.value.trim();
+        if (direccion.length < 5) {
+            mensajeDiv.textContent = 'Ingrese una dirección válida.';
+            mensajeDiv.style.color = 'red';
+            toggleForm(true);
+            return;
+        }
+        mensajeDiv.textContent = 'Validando...';
+        mensajeDiv.style.color = '';
+        const params = new URLSearchParams();
+        params.append('direccion', direccion);
+        try {
+            const response = await fetch('/zona', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params.toString()
+            });
+            const data = await response.json();
+            if (data.response === 'ok') {
+                mensajeDiv.textContent = data.mensaje;
+                mensajeDiv.style.color = 'green';
+                toggleForm(false);
+            } else {
+                mensajeDiv.textContent = data.mensaje;
+                mensajeDiv.style.color = 'red';
+                toggleForm(true);
             }
-            if (domicilioCheck.checked && !direccionValida()) {
-                alert('Ingrese una dirección válida');
+        } catch {
+            mensajeDiv.textContent = 'Error validando la dirección.';
+            mensajeDiv.style.color = 'red';
+            toggleForm(true);
+        }
+    });
+
+    // Cambia el estado de los campos según el checkbox
+    domicilioCheck.addEventListener('change', () => {
+        if (domicilioCheck.checked) {
+            direccionInput.disabled = false;
+            direccionInput.required = true;
+            validarBtn.disabled = direccionInput.value.trim().length < 5;
+            mensajeDiv.textContent = '';
+            mensajeDiv.style.color = '';
+            toggleForm(true);
+        } else {
+            direccionInput.disabled = true;
+            direccionInput.required = false;
+            direccionInput.value = '';
+            validarBtn.disabled = true;
+            mensajeDiv.textContent = '';
+            mensajeDiv.style.color = '';
+            toggleForm(false);
+        }
+    });
+
+    // Validación final antes de enviar el formulario
+    form.addEventListener('submit', (e) => {
+        document.querySelectorAll(".adiciones-container").forEach(c => { if (typeof c.updateHidden === "function") { c.updateHidden(); } });
+        const cantidades = document.querySelectorAll('input[name="cantidades"]');
+        for (const input of cantidades) {
+            if (parseInt(input.value) <= 0 || isNaN(parseInt(input.value))) {
+                alert('Las cantidades deben ser mayores que cero');
                 e.preventDefault();
                 return;
             }
-        });
+        }
+        if (domicilioCheck.checked && mensajeDiv.style.color !== 'green') {
+            alert('Debe validar una dirección válida y dentro de la zona de cobertura');
+            e.preventDefault();
+            return;
+        }
     });
+});
 </script>
 {% endblock %}
