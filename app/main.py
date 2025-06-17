@@ -7,6 +7,21 @@ from geopy.geocoders import OpenCage
 from geopy.distance import geodesic
 import ssl
 import certifi
+from . import models, database
+from sqlalchemy.orm import Session
+from fastapi import Depends, HTTPException
+from fastapi import HTTPException, status 
+
+models.Base.metadata.create_all(bind=database.engine)
+
+def get_db():
+    db = database.SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
 app = FastAPI()
 
 templates = Jinja2Templates(directory="templates")
@@ -215,3 +230,66 @@ async def zona(direccion: str = Form(...)):
         return {"response": "ok", "mensaje": "En zona de cobertura"}
     else:
         return {"response": "bad", "mensaje": "Fuera de cobertura"}
+
+
+
+#Parte Paulina Revisar 
+
+
+@app.post("/cliente")
+async def registrar_o_verificar_cliente(
+    nombre_apellido: str = Form(...),
+    direccion: str = Form(...),
+    telefono: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    # Validación: campos vacíos
+    if not nombre_apellido.strip() or not direccion.strip() or not telefono.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Faltan datos obligatorios para registrar al cliente"
+        )
+
+    # Verificar si ya existe
+    cliente_existente = db.query(models.Cliente).filter(models.Cliente.telefono == telefono).first()
+
+    if cliente_existente:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="El cliente ya está registrado"
+        )
+
+    # Crear nuevo cliente
+    nuevo_cliente = models.Cliente(
+        nombre_apellido=nombre_apellido,
+        direccion=direccion,
+        telefono=telefono
+    )
+    db.add(nuevo_cliente)
+    db.commit()
+    db.refresh(nuevo_cliente)
+
+    return {
+        "mensaje": "Cliente registrado exitosamente",
+        "cliente": {
+            "nombre": nuevo_cliente.nombre_apellido,
+            "direccion": nuevo_cliente.direccion,
+            "telefono": nuevo_cliente.telefono
+        }
+    }
+
+@app.get("/cliente/{telefono}")
+async def obtener_cliente(telefono: str, db: Session = Depends(get_db)):
+    cliente = db.query(models.Cliente).filter(models.Cliente.telefono == telefono).first()
+
+    if not cliente:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Cliente no encontrado"
+        )
+
+    return {
+        "nombre": cliente.nombre_apellido,
+        "direccion": cliente.direccion,
+        "telefono": cliente.telefono
+    }

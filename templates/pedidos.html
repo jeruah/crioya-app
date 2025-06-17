@@ -3,6 +3,13 @@
 {% block content %}
 <h2 class="mb-4">{{ titulo | default('Registro de Pedido') }}</h2>
 <form method="post" id="pedido-form">
+    <label for="telefono" class="form-label">Teléfono</label>
+    <input class = "form-control mb-2" id = "prueba"> 
+    <div class="mb-3">
+    <button type="button" class="btn btn-info btn-sm mb-2" id="prueba-bpn" > Consultar Clientes Existentes </button>
+    </div>
+    <label for="nombre_apellido" class="form-label">Nombre y Apellido</label>
+    <input type="text" class="form-control" id="nombre_apellido" name="nombre_apellido" required>
     <div class="form-check mb-2">
         <input class="form-check-input" type="checkbox" id="domicilio-check" name="domicilio">
         <label class="form-check-label" for="domicilio-check">Entrega a domicilio</label>
@@ -13,6 +20,7 @@
     <div id="direccion-mensaje" class="mb-2"></div>
     <div id="productos-container"></div>
     <button type="button" class="btn btn-secondary mt-2" onclick="agregarProducto()">Agregar Producto</button>
+    <button type="button" class="btn btn-warning mt-2" id="vista-previa-btn">Visualización Previa del Pedido</button>
     <button type="submit" class="btn btn-primary mt-2">Enviar Pedido</button>
     <datalist id="product-list">
     {% for key, data in products.items() %}
@@ -205,6 +213,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const validarBtn = document.getElementById('validar-direccion-btn');
     const mensajeDiv = document.getElementById('direccion-mensaje');
     const form = document.getElementById('pedido-form');
+    const btn = document.getElementById("prueba-bpn")
+
+    btn.addEventListener("click",async()=>{
+        const numero = document.getElementById("prueba").value.toString();
+        const url = "/cliente/"+numero
+        fetch(url)
+
+            .then(response => response.json())
+            .then(data => {
+                console.log(data)
+                const nombre = data.nombre;
+                console.log('Nombre del cliente:', nombre);
+
+                 document.getElementById("nombre_apellido").value = data.nombre;
+                 document.getElementById("direccion").value = data.direccion;
+                 document.getElementById("direccion").disabled = false;
+                 document.getElementById("validar-direccion-btn").disabled = false;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+
+
+    });
 
     function toggleForm(disabled) {
         form.querySelectorAll('input, select, textarea, button').forEach(el => {
@@ -296,5 +328,40 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+document.getElementById("vista-previa-btn").addEventListener("click", () => {
+    const nombre = document.getElementById("nombre_apellido").value.trim();
+    const telefono = document.getElementById("prueba").value.trim();
+    const direccion = document.getElementById("direccion").value.trim();
+    const domicilio = document.getElementById("domicilio-check").checked ? "Sí" : "No";
+
+    const productos = [];
+    const contenedores = document.querySelectorAll("#productos-container > div");
+    contenedores.forEach((c, i) => {
+        const producto = c.querySelector('input[list="product-list"]').value.trim();
+        const cantidad = c.querySelector('input[name="cantidades"]').value.trim();
+        const tamano = c.querySelector('select[name="tamanos"]').value.trim();
+        const detalle = c.querySelector('textarea[name="detalles"]').value.trim();
+        const adicionesInput = c.querySelector('input[name="adiciones"]');
+        const adiciones = adicionesInput ? adicionesInput.value.split(",").filter(x => x).join(", ") : "";
+
+        productos.push(`Producto ${i + 1}:\n  - Nombre: ${producto}\n  - Cantidad: ${cantidad}\n  - Tamaño: ${tamano}\n  - Adiciones: ${adiciones || "Ninguna"}\n  - Detalles: ${detalle || "Ninguno"}`);
+    });
+
+    const resumen = `
+📋 Resumen del Pedido:
+👤 Cliente: ${nombre}
+📞 Teléfono: ${telefono}
+🏠 Dirección: ${domicilio === "Sí" ? direccion : "Sin domicilio"}
+🚚 Domicilio: ${domicilio}
+
+🧾 Productos:
+${productos.join("\n\n")}
+    `.trim();
+
+    alert(resumen);
+});
+
+
 </script>
 {% endblock %}
