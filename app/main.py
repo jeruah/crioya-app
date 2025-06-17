@@ -1,8 +1,10 @@
 from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from typing import List
+from geopy.geocoders import Nominatim
+from geopy.distance import geodesic
 
 app = FastAPI()
 
@@ -105,10 +107,14 @@ ADICIONES = [i["nombre"] for i in MENU_FORMULARIO.get("Adiciones", [])]
 
 PRODUCTS = _build_products(MENU_FORMULARIO)
 
+# Coordenadas y radio de cobertura
+LOCAL_COORDS = (4.601, -74.070)  # Coordenadas del local
+RADIO_COBERTURA = 2000  # 2 km
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
 
 @app.get("/main", response_class=HTMLResponse)
 async def main_page(request: Request):
@@ -190,3 +196,16 @@ async def cocina(request: Request):
         "cocina.html",
         {"request": request, "titulo": "Interfaz de Cocina"},
     )
+
+@app.post('/zona')
+async def zona(direccion: str = Form(...)):
+    geolocator = Nominatim(user_agent="crioya_app_jeruah@unal.edu.co")
+    location = geolocator.geocode(direccion, exactly_one=True)
+    if not location:
+        return {"response": "bad", "mensaje": "Dirección no encontrada"}
+    direccion_coords = (location.latitude, location.longitude)
+    distancia = geodesic(LOCAL_COORDS, direccion_coords).meters
+    if distancia <= RADIO_COBERTURA:
+        return {"response": "ok", "mensaje": "En zona de cobertura"}
+    else:
+        return {"response": "bad", "mensaje": "Fuera de cobertura"}
