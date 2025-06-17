@@ -5,3 +5,4 @@ pydantic
 
 geopy~=2.4.1
 python-multipart~=0.0.20
+certifi~=2025.6.15

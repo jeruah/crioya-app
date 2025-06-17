@@ -5,12 +5,13 @@ from fastapi.staticfiles import StaticFiles
 from typing import List
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
-
+import ssl
+import certifi
 app = FastAPI()
 
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
+ctx = ssl.create_default_context(cafile=certifi.where())
 # Carta completa de productos
 MENU_FORMULARIO = {
     "Entradas": [
@@ -199,7 +200,7 @@ async def cocina(request: Request):
 
 @app.post('/zona')
 async def zona(direccion: str = Form(...)):
-    geolocator = Nominatim(user_agent="crioya_app_jeruah@unal.edu.co")
+    geolocator = Nominatim(user_agent="crioya_app_jeruah@unal.edu.co", ssl_context=ctx)
     location = geolocator.geocode(direccion, exactly_one=True)
     if not location:
         return {"response": "bad", "mensaje": "Dirección no encontrada"}
