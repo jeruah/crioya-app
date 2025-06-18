@@ -15,3 +15,25 @@ class ClienteRegistroResponse(BaseModel):
 class ZonaResponse(BaseModel):
     response: str
     mensaje: str
+
+
+class PedidoItem(BaseModel):
+    producto: str
+    cantidad: int
+    tamano: str
+    adicion: list[str] | None = None
+    detalle: str | None = None
+
+    class Config:
+        from_attributes = True
+
+
+class PedidoResponse(BaseModel):
+    nombre: str
+    telefono: str
+    direccion: str
+    domicilio: bool
+    pedido: list[PedidoItem]
+
+    class Config:
+        from_attributes = True
