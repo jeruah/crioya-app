@@ -18,12 +18,10 @@ class ZonaResponse(BaseModel):
 
 
 class PedidoItem(BaseModel):
-    """Información de un producto dentro de un pedido."""
-
     producto: str
     cantidad: int
     tamano: str
-    adicion: str | None = None
+    adicion: list[str] | None = None
     detalle: str | None = None
 
     class Config:
@@ -32,7 +30,6 @@ class PedidoItem(BaseModel):
 
 class PedidoResponse(BaseModel):
     """Representación completa del pedido recibido."""
-
     nombre: str
     telefono: str
     direccion: str
@@ -41,4 +38,3 @@ class PedidoResponse(BaseModel):
 
     class Config:
         from_attributes = True
-

@@ -143,7 +143,6 @@ async def index(request: Request):
 async def main_page(request: Request):
     return templates.TemplateResponse("main.html", {"request": request})
 
-
 def _crear_pedido_response(
     productos: List[str],
     cantidades: List[int],
@@ -163,12 +162,14 @@ def _crear_pedido_response(
         if cantidad <= 0:
             continue
         label = PRODUCTS.get(producto, {}).get("label", producto)
+        adiciones_list = [a.strip() for a in adicion.split(",") if a.strip()]
+
         items.append(
             schemas.PedidoItem(
                 producto=label,
                 cantidad=cantidad,
                 tamano=tamano,
-                adicion=adicion or None,
+                adicion=adiciones_list or None,
                 detalle=detalle or None,
             )
         )
@@ -381,3 +382,4 @@ async def obtener_cliente(telefono: str, db: Session = Depends(get_db)):
         "direccion": cliente.direccion,
         "telefono": cliente.telefono
     }
+
