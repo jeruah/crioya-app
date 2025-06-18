@@ -333,7 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             return;
         }
-        if (!clienteExiste && domicilioCheck.value && nombreInput.value && direccionInput.value && telefonoInput.value) {
+        if (!clienteExiste && domicilioCheck.checked && nombreInput.value && direccionInput.value && telefonoInput.value) {
             e.preventDefault(); // Detener envío
             try {
                 const params = new URLSearchParams();
