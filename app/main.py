@@ -1,3 +1,7 @@
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -7,11 +11,11 @@ from geopy.geocoders import OpenCage
 from geopy.distance import geodesic
 import ssl
 import certifi
-from . import models, database, schemas
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException, status
+from . import models, database, schemas
 
-models.Base.metadata.create_all(bind=database.engine)
+database.create_db_and_tables()
 
 def get_db():
     db = database.SessionLocal()
@@ -19,7 +23,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
 
 app = FastAPI()
 
@@ -110,7 +113,7 @@ MENU_FORMULARIO = {
     ],
 }
 
-LOCATION_KEY = "2b67a12237c84dbdbc22fdf65c4fa00b"
+LOCATION_KEY = os.getenv("LOCATION_KEY")
 
 def _build_products(menu: dict) -> dict:
     """Convierte el menú en el formato utilizado por el formulario."""

@@ -382,18 +382,18 @@ document.getElementById("vista-previa-btn").addEventListener("click", () => {
     });
 
     const resumen = `
-📋 Resumen del Pedido:
-👤 Cliente: ${nombre}
-📞 Teléfono: ${telefono}
-🏠 Dirección: ${domicilio === "Sí" ? direccion : "Sin domicilio"}
-🚚 Domicilio: ${domicilio}
+        📋 Resumen del Pedido:
+        👤 Cliente: ${nombre}
+        📞 Teléfono: ${telefono}
+        🏠 Dirección: ${domicilio === "Sí" ? direccion : "Sin domicilio"}
+        🚚 Domicilio: ${domicilio}
 
-🧾 Productos:
-${productos.join("\n\n")}
-    `.trim();
+        🧾 Productos:
+        ${productos.join("\n\n")}
+            `.trim();
 
-    alert(resumen);
-});
+            alert(resumen);
+        });
 
 
 </script>
