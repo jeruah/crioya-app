@@ -143,6 +143,44 @@ async def index(request: Request):
 async def main_page(request: Request):
     return templates.TemplateResponse("main.html", {"request": request})
 
+
+def _crear_pedido_response(
+    productos: List[str],
+    cantidades: List[int],
+    tamanos: List[str],
+    adiciones: List[str],
+    detalles: List[str],
+    nombre_apellido: str,
+    telefono: str,
+    direccion: str,
+    domicilio: bool,
+) -> schemas.PedidoResponse:
+    """Construye un objeto de respuesta de pedido a partir de los campos del formulario."""
+    items: list[schemas.PedidoItem] = []
+    for producto, cantidad, tamano, adicion, detalle in zip(
+        productos, cantidades, tamanos, adiciones, detalles
+    ):
+        if cantidad <= 0:
+            continue
+        label = PRODUCTS.get(producto, {}).get("label", producto)
+        items.append(
+            schemas.PedidoItem(
+                producto=label,
+                cantidad=cantidad,
+                tamano=tamano,
+                adicion=adicion or None,
+                detalle=detalle or None,
+            )
+        )
+
+    return schemas.PedidoResponse(
+        nombre=nombre_apellido,
+        telefono=telefono,
+        direccion=direccion,
+        domicilio=domicilio,
+        pedido=items,
+    )
+
 async def _procesar_pedido(
     request: Request,
     productos: List[str],
@@ -156,29 +194,26 @@ async def _procesar_pedido(
     domicilio: bool,
 ):
     """Genera la respuesta con el resumen del pedido."""
-    pedido = []
-    for producto, cantidad, tamano, adicion, detalle in zip(
-        productos, cantidades, tamanos, adiciones, detalles
-    ):
-        if cantidad <= 0:
-            continue
-        label = PRODUCTS.get(producto, {}).get("label", producto)
-        pedido.append({
-            "producto": label,
-            "cantidad": cantidad,
-            "tamano": tamano,
-            "adicion": adicion,
-            "detalle": detalle,
-        })
+    pedido = _crear_pedido_response(
+        productos,
+        cantidades,
+        tamanos,
+        adiciones,
+        detalles,
+        nombre_apellido,
+        telefono,
+        direccion,
+        domicilio,
+    )
     return templates.TemplateResponse(
         "pedido_resumen.html",
         {
             "request": request,
-            "pedido": pedido,
-            "nombre": nombre_apellido,
-            "telefono": telefono,
-            "direccion": direccion,
-            "domicilio": domicilio,
+            "pedido": pedido.pedido,
+            "nombre": pedido.nombre,
+            "telefono": pedido.telefono,
+            "direccion": pedido.direccion,
+            "domicilio": pedido.domicilio,
         },
     )
 
@@ -243,6 +278,32 @@ async def cocina(request: Request):
     return templates.TemplateResponse(
         "cocina.html",
         {"request": request, "titulo": "Interfaz de Cocina"},
+    )
+
+
+@app.post("/pedido", response_model=schemas.PedidoResponse)
+async def crear_pedido(
+    telefono: str = Form(...),
+    nombre_apellido: str = Form(...),
+    direccion: str = Form(""),
+    domicilio: bool = Form(False),
+    productos: List[str] = Form(...),
+    cantidades: List[int] = Form(...),
+    tamanos: List[str] = Form(...),
+    adiciones: List[str] = Form(...),
+    detalles: List[str] = Form(...),
+):
+    """Recibe los campos del formulario y devuelve un objeto de pedido."""
+    return _crear_pedido_response(
+        productos,
+        cantidades,
+        tamanos,
+        adiciones,
+        detalles,
+        nombre_apellido,
+        telefono,
+        direccion if domicilio else "",
+        domicilio,
     )
 
 @app.post('/zona', response_model=schemas.ZonaResponse)
