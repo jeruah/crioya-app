@@ -6,7 +6,7 @@ class ClienteBase(BaseModel):
     telefono: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ClienteRegistroResponse(BaseModel):
     mensaje: str
