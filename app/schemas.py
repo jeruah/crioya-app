@@ -29,6 +29,7 @@ class PedidoItem(BaseModel):
 
 
 class PedidoResponse(BaseModel):
+    """Representación completa del pedido recibido."""
     nombre: str
     telefono: str
     direccion: str

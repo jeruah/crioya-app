@@ -163,6 +163,7 @@ def _crear_pedido_response(
             continue
         label = PRODUCTS.get(producto, {}).get("label", producto)
         adiciones_list = [a.strip() for a in adicion.split(",") if a.strip()]
+
         items.append(
             schemas.PedidoItem(
                 producto=label,
@@ -180,7 +181,6 @@ def _crear_pedido_response(
         domicilio=domicilio,
         pedido=items,
     )
-
 
 async def _procesar_pedido(
     request: Request,
