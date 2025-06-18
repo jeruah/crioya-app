@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from typing import List
@@ -7,10 +7,9 @@ from geopy.geocoders import OpenCage
 from geopy.distance import geodesic
 import ssl
 import certifi
-from . import models, database
+from . import models, database, schemas
 from sqlalchemy.orm import Session
-from fastapi import Depends, HTTPException
-from fastapi import HTTPException, status 
+from fastapi import Depends, HTTPException, status
 
 models.Base.metadata.create_all(bind=database.engine)
 
@@ -243,7 +242,7 @@ async def cocina(request: Request):
         {"request": request, "titulo": "Interfaz de Cocina"},
     )
 
-@app.post('/zona')
+@app.post('/zona', response_model=schemas.ZonaResponse)
 async def zona(direccion: str = Form(...)):
     geolocator = OpenCage(LOCATION_KEY, timeout=10, ssl_context=ctx)
     location = geolocator.geocode(direccion, exactly_one=True)
@@ -261,7 +260,7 @@ async def zona(direccion: str = Form(...)):
 #Parte Paulina Revisar 
 
 
-@app.post("/cliente")
+@app.post("/cliente", response_model=schemas.ClienteRegistroResponse)
 async def registrar_o_verificar_cliente(
     nombre_apellido: str = Form(...),
     direccion: str = Form(...),
@@ -303,7 +302,7 @@ async def registrar_o_verificar_cliente(
         }
     }
 
-@app.get("/cliente/{telefono}")
+@app.get("/cliente/{telefono}", response_model=schemas.ClienteBase)
 async def obtener_cliente(telefono: str, db: Session = Depends(get_db)):
     cliente = db.query(models.Cliente).filter(models.Cliente.telefono == telefono).first()
 
