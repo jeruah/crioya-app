@@ -2,6 +2,19 @@
 {% block title %}Resumen de Pedido{% endblock %}
 {% block content %}
 <h2>📝 Resumen de Pedido</h2>
+
+<div class="mb-3">
+    <p><strong>Cliente:</strong> {{ nombre }}</p>
+    <p><strong>Teléfono:</strong> {{ telefono }}</p>
+    <p><strong>Dirección:</strong>
+        {% if domicilio and direccion %}
+            {{ direccion }}
+        {% else %}
+            Sin domicilio
+        {% endif %}
+    </p>
+</div>
+
 <ul class="list-group">
     {% for item in pedido %}
     <li class="list-group-item">

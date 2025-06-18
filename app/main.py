@@ -148,6 +148,10 @@ async def _procesar_pedido(
     tamanos: List[str],
     adiciones: List[str],
     detalles: List[str],
+    nombre_apellido: str,
+    telefono: str,
+    direccion: str,
+    domicilio: bool,
 ):
     """Genera la respuesta con el resumen del pedido."""
     pedido = []
@@ -165,7 +169,15 @@ async def _procesar_pedido(
             "detalle": detalle,
         })
     return templates.TemplateResponse(
-        "pedido_resumen.html", {"request": request, "pedido": pedido}
+        "pedido_resumen.html",
+        {
+            "request": request,
+            "pedido": pedido,
+            "nombre": nombre_apellido,
+            "telefono": telefono,
+            "direccion": direccion,
+            "domicilio": domicilio,
+        },
     )
 
 
@@ -185,6 +197,10 @@ async def atencion(request: Request):
 @app.post("/atencion", response_class=HTMLResponse)
 async def submit_atencion(
     request: Request,
+    telefono: str = Form(...),
+    nombre_apellido: str = Form(...),
+    direccion: str = Form(""),
+    domicilio: bool = Form(False),
     productos: List[str] = Form(...),
     cantidades: List[int] = Form(...),
     tamanos: List[str] = Form(...),
@@ -192,7 +208,16 @@ async def submit_atencion(
     detalles: List[str] = Form(...),
 ):
     return await _procesar_pedido(
-        request, productos, cantidades, tamanos, adiciones, detalles
+        request,
+        productos,
+        cantidades,
+        tamanos,
+        adiciones,
+        detalles,
+        nombre_apellido,
+        telefono,
+        direccion if domicilio else "",
+        domicilio,
     )
 
 @app.get("/facturas", response_class=HTMLResponse)
