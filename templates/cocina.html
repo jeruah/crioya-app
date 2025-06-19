@@ -10,7 +10,7 @@
         socket.onmessage = function(event) {
             const pedido = JSON.parse(event.data);
             const item = document.createElement("li");
-            item.innerText = `Pedido #${pedido.id} - Cliente: ${pedido.cliente}`;
+            item.innerText = `Cliente: ${pedido.nombre} - Pedido: ${pedido.pedido[0].producto}`;
             document.getElementById("lista-pedidos").appendChild(item);
         };
 
