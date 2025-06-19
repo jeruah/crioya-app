@@ -1,6 +1,21 @@
 {% extends "base.html" %}
 {% block title %}Cocina{% endblock %}
 {% block content %}
-<h2 class="mb-4">🍳 Interfaz de Cocina</h2>
-<p>En construcci\u00f3n...</p>
+<h1>Pedidos en tiempo real</h1>
+    <ul id="lista-pedidos"></ul>
+
+    <script>
+        const socket = new WebSocket("ws://" + window.location.host + "/ws/cocina");
+
+        socket.onmessage = function(event) {
+            const pedido = JSON.parse(event.data);
+            const item = document.createElement("li");
+            item.innerText = `Pedido #${pedido.id} - Cliente: ${pedido.cliente}`;
+            document.getElementById("lista-pedidos").appendChild(item);
+        };
+
+        socket.onclose = function() {
+            alert("WebSocket cerrado");
+        };
+    </script>
 {% endblock %}

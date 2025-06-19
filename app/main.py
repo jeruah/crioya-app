@@ -1,9 +1,10 @@
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from typing import List
@@ -12,10 +13,11 @@ from geopy.distance import geodesic
 import ssl
 import certifi
 from sqlalchemy.orm import Session
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, WebSocket, WebSocketDisconnect
 from . import models, database, schemas
 
-database.create_db_and_tables()
+# SOLO USAR SI SE DESEA RECREAR LA BASE DE DATOS
+#database.create_db_and_tables()
 
 def get_db():
     db = database.SessionLocal()
@@ -153,7 +155,7 @@ def _crear_pedido_response(
     telefono: str,
     direccion: str,
     domicilio: bool,
-) -> schemas.PedidoResponse:
+        ) -> schemas.PedidoResponse:
     """Construye un objeto de respuesta de pedido a partir de los campos del formulario."""
     items: list[schemas.PedidoItem] = []
     for producto, cantidad, tamano, adicion, detalle in zip(
@@ -182,41 +184,6 @@ def _crear_pedido_response(
         pedido=items,
     )
 
-async def _procesar_pedido(
-    request: Request,
-    productos: List[str],
-    cantidades: List[int],
-    tamanos: List[str],
-    adiciones: List[str],
-    detalles: List[str],
-    nombre_apellido: str,
-    telefono: str,
-    direccion: str,
-    domicilio: bool,
-):
-    """Genera la respuesta con el resumen del pedido."""
-    pedido = _crear_pedido_response(
-        productos,
-        cantidades,
-        tamanos,
-        adiciones,
-        detalles,
-        nombre_apellido,
-        telefono,
-        direccion,
-        domicilio,
-    )
-    return templates.TemplateResponse(
-        "pedido_resumen.html",
-        {
-            "request": request,
-            "pedido": pedido.pedido,
-            "nombre": pedido.nombre,
-            "telefono": pedido.telefono,
-            "direccion": pedido.direccion,
-            "domicilio": pedido.domicilio,
-        },
-    )
 
 
 @app.get("/atencion", response_class=HTMLResponse)
@@ -232,9 +199,8 @@ async def atencion(request: Request):
     )
 
 
-@app.post("/atencion", response_class=HTMLResponse)
+@app.post("/atencion")
 async def submit_atencion(
-    request: Request,
     telefono: str = Form(...),
     nombre_apellido: str = Form(...),
     direccion: str = Form(""),
@@ -245,8 +211,7 @@ async def submit_atencion(
     adiciones: List[str] = Form(...),
     detalles: List[str] = Form(...),
 ):
-    return await _procesar_pedido(
-        request,
+    pedido = _crear_pedido_response(
         productos,
         cantidades,
         tamanos,
@@ -257,6 +222,32 @@ async def submit_atencion(
         direccion if domicilio else "",
         domicilio,
     )
+    msg = await nuevo_pedido(pedido)
+    print(msg)  # Log del mensaje enviado a la cocina
+    response = RedirectResponse(url="/resumen", status_code=303)
+    # Guarda el pedido en una cookie (serializado)
+    response.set_cookie("ultimo_pedido", pedido.model_dump_json(), max_age=300)
+    return response
+
+
+@app.get("/resumen", response_class=HTMLResponse)
+async def resumen_pedido(request: Request):
+    pedido_json = request.cookies.get("ultimo_pedido")
+    if not pedido_json:
+        return RedirectResponse(url="/atencion")
+    pedido = schemas.PedidoResponse.model_validate_json(pedido_json)
+    return templates.TemplateResponse(
+        "pedido_resumen.html",
+        {
+            "request": request,
+            "pedido": pedido.pedido,
+            "nombre": pedido.nombre,
+            "telefono": pedido.telefono,
+            "direccion": pedido.direccion,
+            "domicilio": pedido.domicilio,
+        },
+    )
+
 
 @app.get("/facturas", response_class=HTMLResponse)
 async def facturas(request: Request):
@@ -272,16 +263,23 @@ async def informe(request: Request):
         {"request": request, "titulo": "Informe Financiero"},
     )
 
+manager = schemas.ConnectionManager()
+@app.websocket("/ws/cocina")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()  # si cocina necesita enviar mensajes
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
 
 @app.get("/cocina", response_class=HTMLResponse)
 async def cocina(request: Request):
-    """Interfaz de cocina temporal."""
-    return templates.TemplateResponse(
-        "cocina.html",
-        {"request": request, "titulo": "Interfaz de Cocina"},
-    )
+    return templates.TemplateResponse("cocina.html", {"request": request})
 
-
+async def nuevo_pedido(pedido: schemas.PedidoResponse):
+    await manager.broadcast(pedido.model_dump_json())
+    return {"mensaje": "Pedido enviado a la cocina"}
 @app.post("/pedido", response_model=schemas.PedidoResponse)
 async def crear_pedido(
     telefono: str = Form(...),
@@ -319,11 +317,6 @@ async def zona(direccion: str = Form(...)):
         return {"response": "ok", "mensaje": "En zona de cobertura"}
     else:
         return {"response": "bad", "mensaje": "Fuera de cobertura"}
-
-
-
-#Parte Paulina Revisar 
-
 
 @app.post("/cliente", response_model=schemas.ClienteRegistroResponse)
 async def registrar_o_verificar_cliente(
