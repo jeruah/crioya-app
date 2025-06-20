@@ -2,20 +2,78 @@
 {% block title %}Cocina{% endblock %}
 {% block content %}
 <h1>Pedidos en tiempo real</h1>
-    <ul id="lista-pedidos"></ul>
 
-    <script>
-        const socket = new WebSocket("ws://" + window.location.host + "/ws/cocina");
+<!-- Tabla para mostrar los pedidos FIFO con clases de Bootstrap -->
+<table class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            <th>N° Pedido</th>
+            <th>Producto</th>
+            <th>Cantidad</th>
+            <th>Tamaño</th>
+            <th>Adiciones</th>
+            <th>Detalles</th>
+        </tr>
+    </thead>
+    <tbody id="listas-pedidos">
+        <!-- Los pedidos se agregarán aquí -->
+    </tbody>
+</table>
 
-        socket.onmessage = function(event) {
-            const pedido = JSON.parse(event.data);
-            const item = document.createElement("li");
-            item.innerText = `Cliente: ${pedido.nombre} - Pedido: ${pedido.pedido[0].producto}`;
-            document.getElementById("lista-pedidos").appendChild(item);
-        };
+<script>
+    const socket = new WebSocket("ws://" + window.location.host + "/ws/cocina");
 
-        socket.onclose = function() {
-            alert("WebSocket cerrado");
-        };
-    </script>
+    let numeroPedido = 1;
+
+    socket.onmessage = function(event) {
+        const pedido = JSON.parse(event.data);
+
+        // Iterar sobre los productos del pedido
+        pedido.pedido.forEach((item, index) => {
+            // Crear la fila para el pedido
+            const row = document.createElement("tr");
+
+            // Si es el primer producto del pedido, agregamos la celda con el número de pedido y rowspan
+            if (index === 0) {
+                const numeroPedidoCell = document.createElement("td");
+                numeroPedidoCell.innerText = numeroPedido++;
+                numeroPedidoCell.rowSpan = pedido.pedido.length;  // Esta celda ocupa varias filas
+                row.appendChild(numeroPedidoCell);
+            }
+
+            // Insertar el nombre del producto
+            const productoCell = document.createElement("td");
+            productoCell.innerText = item.producto;
+            row.appendChild(productoCell);
+
+            // Insertar la cantidad
+            const cantidadCell = document.createElement("td");
+            cantidadCell.innerText = item.cantidad;
+            row.appendChild(cantidadCell);
+
+            // Insertar el tamaño
+            const tamanoCell = document.createElement("td");
+            tamanoCell.innerText = item.tamano;
+            row.appendChild(tamanoCell);
+
+            // Insertar las adiciones
+            const adicionesCell = document.createElement("td");
+            adicionesCell.innerText = item.adicion ? item.adicion.join(", ") : "N/A";
+            row.appendChild(adicionesCell);
+
+            // Insertar los detalles
+            const detalleCell = document.createElement("td");
+            detalleCell.innerText = item.detalle ? item.detalle : "N/A";
+            row.appendChild(detalleCell);
+
+            // Añadir la fila a la tabla
+            document.getElementById("listas-pedidos").appendChild(row);
+        });
+    };
+
+    socket.onclose = function() {
+        alert("WebSocket cerrado");
+    };
+</script>
+
 {% endblock %}
