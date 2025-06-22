@@ -27,3 +27,7 @@ La aplicación cuenta con un formulario para registrar pedidos que también se
 utiliza en el módulo de atención al cliente.
 Desde la interfaz de pedidos ahora es posible agregar múltiples adiciones a un
 producto y eliminar tanto adiciones individuales como productos completos.
+## Autenticacion de cocina
+
+Para acceder al WebSocket de cocina se requiere un token. Establece la variable de entorno `STAFF_TOKEN` con un valor compartido y el navegador incluirá ese token al conectarse a `/ws/cocina`.
+

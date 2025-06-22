@@ -22,6 +22,7 @@ from ..config import (
     LOCAL_COORDS,
     RADIO_COBERTURA,
     cliente_azure,
+    STAFF_TOKEN,
 )
 
 router = APIRouter()
@@ -162,6 +163,10 @@ async def resumen_pedido(request: Request):
 
 @router.websocket("/ws/cocina")
 async def websocket_endpoint(websocket: WebSocket):
+    token = websocket.query_params.get("token")
+    if token != STAFF_TOKEN:
+        await websocket.close(code=1008)
+        return
     await manager.connect(websocket)
     try:
         while True:
@@ -172,7 +177,9 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @router.get("/cocina", response_class=HTMLResponse)
 async def cocina(request: Request):
-    return templates.TemplateResponse("cocina.html", {"request": request})
+    return templates.TemplateResponse(
+        "cocina.html", {"request": request, "token": STAFF_TOKEN}
+    )
 
 
 @router.post("/pedido", response_model=schemas.PedidoResponse)

@@ -64,7 +64,7 @@
 </style>
 
 <script>
-    const socket = new WebSocket("ws://" + window.location.host + "/ws/cocina");
+    const socket = new WebSocket("ws://" + window.location.host + "/ws/cocina?token={{ token }}");
 
     let numeroPedido = 1; // Inicializamos el contador para los números de pedidos
 
