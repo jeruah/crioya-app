@@ -29,3 +29,5 @@ Base = declarative_base()
 def create_db_and_tables():
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
+
+# Comentario prueba
