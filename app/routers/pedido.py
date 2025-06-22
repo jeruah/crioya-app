@@ -1,4 +1,5 @@
 from typing import List
+#from openai import AzureOpenAI
 
 from fastapi import (
     APIRouter,
@@ -20,12 +21,37 @@ from ..config import (
     ctx,
     LOCAL_COORDS,
     RADIO_COBERTURA,
+    cliente_azure,
 )
 
 router = APIRouter()
 
 manager = schemas.ConnectionManager()
 
+""" 
+    solo quitar comentrarios si eres jeronimo, no lo toquen que me cobran plata
+    def _formatear_direccion(direccion: str, cliente: AzureOpenAI) -> str:
+        response = cliente.chat.completions.create(
+            model="gpt-35-turbo-2",
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        "Formatea la siguiente dirección colombiana para geocodificación, "
+                        "reemplazando abreviaturas (CR, Cra, CL, Av, etc.),"
+                        "en el caso de no estar abreviada, o no estar seguro de la abreviatura, dejarlo como está, "
+                        "la letra que acompaña al primer numero ejemplo '10 b' o '10b', no debe tener nigun espacio y debe estar pegado al numero, "
+                        " usando el formato '#num1-num2' para números, "
+                        "un formato de ejemplo sería 'Calle 10b #5-20 Medellin Antioquia', no conviertas numero a texto, "
+                        "y asegura que termine tu respuesta finalize con 'Marinilla Antioquia':\n"
+                        f"{direccion}"
+                    ),
+                }
+            ],
+            max_tokens=20,
+        )
+        return response.choices[0].message.content.strip()
+"""
 
 def _crear_pedido_response(
     productos: List[str],
@@ -176,11 +202,23 @@ async def crear_pedido(
 
 @router.post("/zona", response_model=schemas.ZonaResponse)
 async def zona(direccion: str = Form(...)):
+    if not "marinilla" in direccion.lower():
+        return {"response": "bad", "mensaje": "La direcci\u00f3n debe ser en Marinilla"}
+
+    # direccion = _formatear_direccion(direccion, cliente_azure)
+    # print(f"Direcci\u00f3n formateada: {direccion}")
+
     geolocator = OpenCage(LOCATION_KEY, timeout=10, ssl_context=ctx)
     location = geolocator.geocode(direccion, exactly_one=True)
     if not location:
         return {"response": "bad", "mensaje": "Direcci\u00f3n no encontrada"}
+
+    confianza = location.raw.get("confidence", 0)
+    print(f"Confianza de la direcci\u00f3n: {confianza}")
+
     direccion_coords = (location.latitude, location.longitude)
+    if confianza < 9:
+        return {"response": "bad", "mensaje": "Revisa que la direccion sea correcta"}
     distancia = geodesic(LOCAL_COORDS, direccion_coords).meters
     if distancia <= RADIO_COBERTURA:
         return {"response": "ok", "mensaje": "En zona de cobertura"}

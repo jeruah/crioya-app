@@ -3,12 +3,15 @@ import ssl
 import certifi
 from dotenv import load_dotenv
 from fastapi.templating import Jinja2Templates
+from openai import AzureOpenAI
 
 load_dotenv()
 
 templates = Jinja2Templates(directory="templates")
 ctx = ssl.create_default_context(cafile=certifi.where())
 LOCATION_KEY = os.getenv("LOCATION_KEY")
+AZURE_KEY = os.getenv("azure_key")
+AZURE_ENDPOINT = os.getenv("azure_endpoint")
 
 MENU_FORMULARIO = {
     "Entradas": [
@@ -99,8 +102,14 @@ def _build_products(menu: dict) -> dict:
             productos[item["id"]] = {"label": item["nombre"], "sizes": ["base"]}
     return productos
 
+cliente_azure = AzureOpenAI(
+    azure_endpoint=AZURE_ENDPOINT,
+    api_key=AZURE_KEY,
+    api_version="2024-12-01-preview"
+)
+
 ADICIONES = [i["nombre"] for i in MENU_FORMULARIO.get("Adiciones", [])]
 PRODUCTS = _build_products(MENU_FORMULARIO)
 
 LOCAL_COORDS = (6.172720899383694, -75.33313859325239)
-RADIO_COBERTURA = 50000
+RADIO_COBERTURA = 2500
