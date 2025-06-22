@@ -27,3 +27,20 @@ La aplicación cuenta con un formulario para registrar pedidos que también se
 utiliza en el módulo de atención al cliente.
 Desde la interfaz de pedidos ahora es posible agregar múltiples adiciones a un
 producto y eliminar tanto adiciones individuales como productos completos.
+
+## Variables de entorno
+
+Cree un archivo `.env` en la raíz del proyecto con las siguientes claves:
+
+```
+user=
+password=
+host=
+port=
+dbname=
+LOCATION_KEY=
+azure_key=
+azure_endpoint=
+```
+
+Puede tomar como referencia el archivo `.env.example` incluido en el repositorio.
