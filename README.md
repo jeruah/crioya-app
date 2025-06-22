@@ -49,6 +49,8 @@ dbname=
 LOCATION_KEY=
 azure_key=
 azure_endpoint=
+SESSION_SECRET=
+STAFF_TOKEN=
 ```
 
 Puede tomar como referencia el archivo `.env.example` incluido en el repositorio.
