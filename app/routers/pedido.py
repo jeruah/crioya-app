@@ -137,7 +137,14 @@ async def submit_atencion(
     msg = await nuevo_pedido(pedido)
     print(msg)
     response = RedirectResponse(url="/resumen", status_code=303)
-    response.set_cookie("ultimo_pedido", pedido.model_dump_json(), max_age=300)
+    response.set_cookie(
+        "ultimo_pedido",
+        pedido.model_dump_json(),
+        max_age=300,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+    )
     return response
 
 

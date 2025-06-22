@@ -21,6 +21,10 @@ Ejecutar la aplicaci\u00f3n:
 uvicorn app.main:app --reload
 ```
 
+La aplicación utiliza cookies de sesión a través de `SessionMiddleware`. Puedes
+definir la clave de sesión estableciendo la variable de entorno
+`SESSION_SECRET`.
+
 Abrir en el navegador `http://localhost:8000`.
 
 La aplicación cuenta con un formulario para registrar pedidos que también se
