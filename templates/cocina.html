@@ -8,6 +8,7 @@
     <thead>
         <tr>
             <th>N° Orden</th>
+            <th>Cliente</th>
             <th>Producto</th>
             <th>Cantidad</th>
             <th>Tamaño</th>
@@ -88,6 +89,11 @@ socket.onmessage = function(event) {
             numeroPedidoCell.innerText = numeroPedidoActual;  // Aquí ponemos el número de pedido
             numeroPedidoCell.rowSpan = pedido.pedido.length;  // Esta celda ocupa varias filas
             row.appendChild(numeroPedidoCell);
+
+            const nombreCell = document.createElement("td");
+            nombreCell.innerText = pedido.nombre;
+            nombreCell.rowSpan = pedido.pedido.length;
+            row.appendChild(nombreCell);
         }
 
         // Insertar el nombre del producto
@@ -121,7 +127,7 @@ socket.onmessage = function(event) {
         // Notificar sobre el nuevo pedido
         const notification = document.createElement("div");
         notification.classList.add("notification");
-        notification.innerText = `Se han recibido una nueva orden`;
+        notification.innerText = `Orden nueva para ${pedido.nombre}`;
         document.body.appendChild(notification);
 
         // Eliminar la notificación después de 5 segundos

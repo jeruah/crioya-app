@@ -36,7 +36,6 @@ producto y eliminar tanto adiciones individuales como productos completos.
 
 Para acceder al WebSocket de cocina se requiere un token. Establece la variable de entorno `STAFF_TOKEN` con un valor compartido y el navegador incluirá ese token al conectarse a `/ws/cocina`.
 
-
 ## Variables de entorno
 
 Cree un archivo `.env` en la raíz del proyecto con las siguientes claves:
