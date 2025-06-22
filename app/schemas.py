@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from fastapi  import WebSocket
 from typing import List
+from datetime import datetime
 
 class ClienteBase(BaseModel):
     nombre: str
@@ -49,3 +50,22 @@ class ConnectionManager:
     async def broadcast(self, message: str):
         for connection in self.active_connections:
             await connection.send_text(message)
+
+
+# 🧾 Esquema que define cómo se verá un pedido cuando se devuelva desde la base de datos
+class PedidoDB(BaseModel):
+    id: int                                 
+    
+    nombre_apellido: str                    
+    
+    telefono: str                           
+    
+    direccion: str                          
+    
+    domicilio: bool                         
+    
+    productos: str                          
+    
+
+    class Config:
+        from_attributes = True              # Permite convertir automáticamente desde objetos ORM de SQLAlchemy

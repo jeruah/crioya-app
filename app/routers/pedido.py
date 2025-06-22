@@ -24,6 +24,11 @@ from ..config import (
     cliente_azure,
 )
 
+from sqlalchemy.orm import Session
+from fastapi import Depends
+from .. import models, dependencies
+import json
+
 router = APIRouter()
 
 manager = schemas.ConnectionManager()
@@ -111,8 +116,14 @@ async def nuevo_pedido(pedido: schemas.PedidoResponse):
     return {"mensaje": "Pedido enviado a la cocina"}
 
 
+from sqlalchemy.orm import Session
+from fastapi import Depends
+from .. import models, dependencies
+import json
+
 @router.post("/atencion")
 async def submit_atencion(
+    request: Request,
     telefono: str = Form(...),
     nombre_apellido: str = Form(...),
     direccion: str = Form(""),
@@ -122,7 +133,9 @@ async def submit_atencion(
     tamanos: List[str] = Form(...),
     adiciones: List[str] = Form(...),
     detalles: List[str] = Form(...),
+    db: Session = Depends(dependencies.get_db),  # ← conexión a la base de datos
 ):
+    # Construir objeto del pedido desde los campos del formulario
     pedido = _crear_pedido_response(
         productos,
         cantidades,
@@ -134,30 +147,52 @@ async def submit_atencion(
         direccion if domicilio else "",
         domicilio,
     )
-    msg = await nuevo_pedido(pedido)
-    print(msg)
-    response = RedirectResponse(url="/resumen", status_code=303)
-    response.set_cookie("ultimo_pedido", pedido.model_dump_json(), max_age=300)
+
+    # Convertir la lista de productos en texto JSON
+    productos_serializados = json.dumps([item.dict() for item in pedido.pedido])
+
+    # Crear un nuevo registro del modelo Pedido
+    nuevo_pedido = models.Pedido(
+        nombre_apellido=nombre_apellido,
+        telefono=telefono,
+        direccion=direccion,
+        domicilio=domicilio,
+        productos=productos_serializados,
+    )
+
+    # Guardar en la base de datos
+    db.add(nuevo_pedido)
+    db.commit()
+    db.refresh(nuevo_pedido)
+
+    # Redirigir al resumen del pedido, pasando el ID por URL
+    response = RedirectResponse(url=f"/resumen?id={nuevo_pedido.id}", status_code=303)
     return response
 
 
+
 @router.get("/resumen", response_class=HTMLResponse)
-async def resumen_pedido(request: Request):
-    pedido_json = request.cookies.get("ultimo_pedido")
-    if not pedido_json:
+async def resumen_pedido(request: Request, id: int, db: Session = Depends(dependencies.get_db)):
+    # Buscar el pedido por ID en la base de datos
+    pedido = db.query(models.Pedido).filter(models.Pedido.id == id).first()
+    if not pedido:
         return RedirectResponse(url="/atencion")
-    pedido = schemas.PedidoResponse.model_validate_json(pedido_json)
+
+    # Convertir el campo productos (JSON string) a lista de diccionarios
+    productos = json.loads(pedido.productos)
+
     return templates.TemplateResponse(
         "pedido_resumen.html",
         {
             "request": request,
-            "pedido": pedido.pedido,
-            "nombre": pedido.nombre,
+            "pedido": productos,
+            "nombre": pedido.nombre_apellido,
             "telefono": pedido.telefono,
             "direccion": pedido.direccion,
             "domicilio": pedido.domicilio,
         },
     )
+
 
 
 @router.websocket("/ws/cocina")
