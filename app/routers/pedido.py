@@ -25,6 +25,11 @@ from ..config import (
     STAFF_TOKEN,
 )
 
+from sqlalchemy.orm import Session
+from fastapi import Depends
+from .. import models, dependencies
+import json
+
 router = APIRouter()
 
 manager = schemas.ConnectionManager()
@@ -112,8 +117,16 @@ async def nuevo_pedido(pedido: schemas.PedidoResponse):
     return {"mensaje": "Pedido enviado a la cocina"}
 
 
+from sqlalchemy.orm import Session
+from fastapi import Depends
+from .. import models, dependencies
+import json
+from ..routers.facturas import generar_factura_desde_pedido
+
+
 @router.post("/atencion")
 async def submit_atencion(
+    request: Request,
     telefono: str = Form(...),
     nombre_apellido: str = Form(...),
     direccion: str = Form(""),
@@ -123,7 +136,9 @@ async def submit_atencion(
     tamanos: List[str] = Form(...),
     adiciones: List[str] = Form(...),
     detalles: List[str] = Form(...),
+    db: Session = Depends(dependencies.get_db),  # ← conexión a la base de datos
 ):
+    # Construir objeto del pedido desde los campos del formulario
     pedido = _crear_pedido_response(
         productos,
         cantidades,
@@ -135,37 +150,48 @@ async def submit_atencion(
         direccion if domicilio else "",
         domicilio,
     )
-    msg = await nuevo_pedido(pedido)
-    print(msg)
-    response = RedirectResponse(url="/resumen", status_code=303)
-    response.set_cookie(
-        "ultimo_pedido",
-        pedido.model_dump_json(),
-        max_age=300,
-        httponly=True,
-        secure=True,
-        samesite="lax",
-    )
-    return response
+
+    # 🧾 Generar la factura directamente (sin guardar pedido)
+    factura = generar_factura_desde_pedido(pedido, db)
+
+    # 🚩 Enviar el pedido a cocina en tiempo real
+    await nuevo_pedido(pedido)
+
+  
+    return templates.TemplateResponse(
+    "pedido_resumen.html",
+    {
+        "request": request,
+        "pedido": [item.dict() for item in pedido.pedido],
+        "nombre": pedido.nombre,
+        "telefono": pedido.telefono,
+        "direccion": pedido.direccion,
+        "domicilio": pedido.domicilio,
+    },
+)
 
 
 @router.get("/resumen", response_class=HTMLResponse)
-async def resumen_pedido(request: Request):
-    pedido_json = request.cookies.get("ultimo_pedido")
-    if not pedido_json:
+async def resumen_pedido(request: Request, id: int, db: Session = Depends(dependencies.get_db)):
+    factura = db.query(models.Factura).filter(models.Factura.id == id).first()
+    if not factura:
         return RedirectResponse(url="/atencion")
-    pedido = schemas.PedidoResponse.model_validate_json(pedido_json)
+
+    productos = json.loads(factura.productos)
+    print("DEBUG productos:", productos)  # <-- Agrega esta línea aquí
+
     return templates.TemplateResponse(
         "pedido_resumen.html",
         {
             "request": request,
-            "pedido": pedido.pedido,
-            "nombre": pedido.nombre,
-            "telefono": pedido.telefono,
-            "direccion": pedido.direccion,
-            "domicilio": pedido.domicilio,
+            "pedido": productos,
+            "nombre": factura.cliente,
+            "telefono": "",  # opcional si quieres agregarlo en el futuro
+            "direccion": "", # opcional si lo guardas luego
+            "domicilio": False,  # por ahora puedes dejarlo así
         },
     )
+
 
 
 @router.websocket("/ws/cocina")
@@ -184,9 +210,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @router.get("/cocina", response_class=HTMLResponse)
 async def cocina(request: Request):
-    return templates.TemplateResponse(
-        "cocina.html", {"request": request, "token": STAFF_TOKEN}
-    )
+    return templates.TemplateResponse("cocina.html", {"request": request, "token": STAFF_TOKEN})
 
 
 @router.post("/pedido", response_model=schemas.PedidoResponse)

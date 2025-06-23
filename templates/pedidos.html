@@ -187,6 +187,7 @@ function agregarProducto() {
     const detalleTextarea = crearDetalleTextarea();
 
     selectTamano.id = 'tamano-' + productoIndex;
+    
 
     row.appendChild(removeBtn);
     row.appendChild(crearLabel('Producto'));
@@ -202,6 +203,9 @@ function agregarProducto() {
     row.appendChild(detalleTextarea);
 
     container.appendChild(row);
+
+    actualizarTamanos('', productoIndex);
+    
     productoIndex += 1;
 }
 

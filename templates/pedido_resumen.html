@@ -18,8 +18,10 @@
 <ul class="list-group">
     {% for item in pedido %}
     <li class="list-group-item">
-        {{ item.producto }} - {{ item.tamano }} - Cantidad: {{ item.cantidad }}
-        {% if item.adicion %} | Adición: {{ item.adicion | join(", ") }}{% endif %}
+        {{ item.producto }}{% if item.tamano %} - {{ item.tamano }}{% endif %} - Cantidad: {{ item.cantidad }}
+        {% if item.adicion and item.adicion|length > 0 %}
+            | Adición: {{ item.adicion | join(', ') }}
+        {% endif %}
         {% if item.detalle %} | Detalle: {{ item.detalle }}{% endif %}
     </li>
     {% endfor %}

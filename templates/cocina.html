@@ -98,6 +98,7 @@
 
 socket.onmessage = function(event) {
     const pedido = JSON.parse(event.data);
+    console.log("Pedido recibido:", pedido);
 
     // Usamos el contador en lugar de Date.now()
     const numeroPedidoActual = numeroPedido++;  // Incrementamos el número de pedido en cada mensaje
