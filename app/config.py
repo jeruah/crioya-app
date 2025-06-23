@@ -12,6 +12,7 @@ ctx = ssl.create_default_context(cafile=certifi.where())
 LOCATION_KEY = os.getenv("LOCATION_KEY")
 AZURE_KEY = os.getenv("azure_key")
 AZURE_ENDPOINT = os.getenv("azure_endpoint")
+STAFF_TOKEN = os.getenv("STAFF_TOKEN", "changeme")
 
 MENU_FORMULARIO = {
     "Entradas": [

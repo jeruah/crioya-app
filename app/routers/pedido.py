@@ -22,6 +22,7 @@ from ..config import (
     LOCAL_COORDS,
     RADIO_COBERTURA,
     cliente_azure,
+    STAFF_TOKEN
 )
 
 from sqlalchemy.orm import Session
@@ -120,6 +121,8 @@ from sqlalchemy.orm import Session
 from fastapi import Depends
 from .. import models, dependencies
 import json
+from ..routers.facturas import generar_factura_desde_pedido
+
 
 @router.post("/atencion")
 async def submit_atencion(
@@ -148,48 +151,45 @@ async def submit_atencion(
         domicilio,
     )
 
-    # Convertir la lista de productos en texto JSON
-    productos_serializados = json.dumps([item.dict() for item in pedido.pedido])
+    # 🧾 Generar la factura directamente (sin guardar pedido)
+    factura = generar_factura_desde_pedido(pedido, db)
 
-    # Crear un nuevo registro del modelo Pedido
-    nuevo_pedido = models.Pedido(
-        nombre_apellido=nombre_apellido,
-        telefono=telefono,
-        direccion=direccion,
-        domicilio=domicilio,
-        productos=productos_serializados,
-    )
+    # 🚩 Enviar el pedido a cocina en tiempo real
+    await nuevo_pedido(pedido)
 
-    # Guardar en la base de datos
-    db.add(nuevo_pedido)
-    db.commit()
-    db.refresh(nuevo_pedido)
-
-    # Redirigir al resumen del pedido, pasando el ID por URL
-    response = RedirectResponse(url=f"/resumen?id={nuevo_pedido.id}", status_code=303)
-    return response
+  
+    return templates.TemplateResponse(
+    "pedido_resumen.html",
+    {
+        "request": request,
+        "pedido": [item.dict() for item in pedido.pedido],
+        "nombre": pedido.nombre,
+        "telefono": pedido.telefono,
+        "direccion": pedido.direccion,
+        "domicilio": pedido.domicilio,
+    },
+)
 
 
 
 @router.get("/resumen", response_class=HTMLResponse)
 async def resumen_pedido(request: Request, id: int, db: Session = Depends(dependencies.get_db)):
-    # Buscar el pedido por ID en la base de datos
-    pedido = db.query(models.Pedido).filter(models.Pedido.id == id).first()
-    if not pedido:
+    factura = db.query(models.Factura).filter(models.Factura.id == id).first()
+    if not factura:
         return RedirectResponse(url="/atencion")
 
-    # Convertir el campo productos (JSON string) a lista de diccionarios
-    productos = json.loads(pedido.productos)
+    productos = json.loads(factura.productos)
+    print("DEBUG productos:", productos)  # <-- Agrega esta línea aquí
 
     return templates.TemplateResponse(
         "pedido_resumen.html",
         {
             "request": request,
             "pedido": productos,
-            "nombre": pedido.nombre_apellido,
-            "telefono": pedido.telefono,
-            "direccion": pedido.direccion,
-            "domicilio": pedido.domicilio,
+            "nombre": factura.cliente,
+            "telefono": "",  # opcional si quieres agregarlo en el futuro
+            "direccion": "", # opcional si lo guardas luego
+            "domicilio": False,  # por ahora puedes dejarlo así
         },
     )
 
@@ -207,7 +207,8 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @router.get("/cocina", response_class=HTMLResponse)
 async def cocina(request: Request):
-    return templates.TemplateResponse("cocina.html", {"request": request})
+    return templates.TemplateResponse(
+        "cocina.html", {"request": request, "token": STAFF_TOKEN})
 
 
 @router.post("/pedido", response_model=schemas.PedidoResponse)
