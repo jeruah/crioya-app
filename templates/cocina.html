@@ -8,6 +8,7 @@
     <thead>
         <tr>
             <th>N° Orden</th>
+            <th>Cliente</th>
             <th>Producto</th>
             <th>Cantidad</th>
             <th>Tamaño</th>
@@ -64,8 +65,35 @@
 </style>
 
 <script>
-    const socket = new WebSocket("ws://" + window.location.host + "/ws/cocina");
+    const socket = new WebSocket("ws://" + window.location.host + "/ws/cocina?token={{ token }}");
 
+    // Solicitar permiso para notificaciones al cargar la pagina
+    if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission();
+    }
+
+    function showDesktopNotification(title, body) {
+        if ("Notification" in window && Notification.permission === "granted") {
+            new Notification(title, { body: body });
+        }
+    }
+
+    function playBeep() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+            osc.connect(ctx.destination);
+            osc.start();
+            setTimeout(() => {
+                osc.stop();
+                ctx.close();
+            }, 300);
+        } catch (e) {
+            console.error('Audio error:', e);
+        }
+    }
     let numeroPedido = 1; // Inicializamos el contador para los números de pedidos
 
 socket.onmessage = function(event) {
@@ -89,6 +117,11 @@ socket.onmessage = function(event) {
             numeroPedidoCell.innerText = numeroPedidoActual;  // Aquí ponemos el número de pedido
             numeroPedidoCell.rowSpan = pedido.pedido.length;  // Esta celda ocupa varias filas
             row.appendChild(numeroPedidoCell);
+
+            const nombreCell = document.createElement("td");
+            nombreCell.innerText = pedido.nombre;
+            nombreCell.rowSpan = pedido.pedido.length;
+            row.appendChild(nombreCell);
         }
 
         // Insertar el nombre del producto
@@ -122,8 +155,10 @@ socket.onmessage = function(event) {
         // Notificar sobre el nuevo pedido
         const notification = document.createElement("div");
         notification.classList.add("notification");
-        notification.innerText = `Se han recibido una nueva orden`;
+        notification.innerText = `Orden nueva para ${pedido.nombre}`;
         document.body.appendChild(notification);
+        showDesktopNotification("Nuevo pedido", `Orden nueva para ${pedido.nombre}`);
+        playBeep();
 
         // Eliminar la notificación después de 5 segundos
         setTimeout(() => {
@@ -154,6 +189,8 @@ document.getElementById("btnEliminar").onclick = function() {
         notification.classList.add("notification");
         notification.innerText = `Orden N° ${numeroPedidoEliminado} realizada`;  // Mostramos el número de pedido
         document.body.appendChild(notification);
+        showDesktopNotification("Orden realizada", `Orden N° ${numeroPedidoEliminado} realizada`);
+        playBeep();
 
         // Eliminar la notificación después de 5 segundos
         setTimeout(() => {

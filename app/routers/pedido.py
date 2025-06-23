@@ -22,7 +22,7 @@ from ..config import (
     LOCAL_COORDS,
     RADIO_COBERTURA,
     cliente_azure,
-    STAFF_TOKEN
+    STAFF_TOKEN,
 )
 
 from sqlalchemy.orm import Session
@@ -171,7 +171,6 @@ async def submit_atencion(
 )
 
 
-
 @router.get("/resumen", response_class=HTMLResponse)
 async def resumen_pedido(request: Request, id: int, db: Session = Depends(dependencies.get_db)):
     factura = db.query(models.Factura).filter(models.Factura.id == id).first()
@@ -197,6 +196,10 @@ async def resumen_pedido(request: Request, id: int, db: Session = Depends(depend
 
 @router.websocket("/ws/cocina")
 async def websocket_endpoint(websocket: WebSocket):
+    token = websocket.query_params.get("token")
+    if token != STAFF_TOKEN:
+        await websocket.close(code=1008)
+        return
     await manager.connect(websocket)
     try:
         while True:
@@ -207,8 +210,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @router.get("/cocina", response_class=HTMLResponse)
 async def cocina(request: Request):
-    return templates.TemplateResponse(
-        "cocina.html", {"request": request, "token": STAFF_TOKEN})
+    return templates.TemplateResponse("cocina.html", {"request": request, "token": STAFF_TOKEN})
 
 
 @router.post("/pedido", response_model=schemas.PedidoResponse)
