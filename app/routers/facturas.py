@@ -178,6 +178,10 @@ def listar_facturas(
         fecha_limite = pd.to_datetime(end) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
         filtered = filtered[filtered["fecha"] <= fecha_limite]
     data = filtered.to_dict(orient="records")
+    # Deserializar productos de JSON
+    for row in data:
+        if isinstance(row["productos"], str):
+            row["productos"] = json.loads(row["productos"])
     return [schemas.FacturaResponse(**row) for row in data]
 
 

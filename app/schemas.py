@@ -77,7 +77,7 @@ class FacturaResponse(BaseModel):
     numero: str
     fecha: datetime
     cliente: str
-    productos: str
+    productos: list[dict]
     total: float
 
     class Config:
