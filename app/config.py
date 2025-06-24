@@ -15,6 +15,7 @@ def render_template(request: Request, name: str, context: dict[str, Any] | None 
     ctx = context or {}
     ctx["request"] = request
     ctx["error"] = request.session.pop("error", None)
+    ctx["success"] = request.session.pop("success", None)
     return templates.TemplateResponse(name, ctx)
 ctx = ssl.create_default_context(cafile=certifi.where())
 LOCATION_KEY = os.getenv("LOCATION_KEY")
