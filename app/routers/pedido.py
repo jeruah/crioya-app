@@ -162,6 +162,8 @@ async def submit_atencion(
         request.session["pedido_data"] = pedido.model_dump()
         raise AppError("No se pudo procesar el pedido") from e
 
+    request.session["success"] = "Pedido enviado a cocina y factura generada"
+
   
     return render_template(
         request,
