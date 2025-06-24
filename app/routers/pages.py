@@ -17,8 +17,9 @@ async def main_page(request: Request):
 
 @router.get("/facturas", response_class=HTMLResponse)
 async def facturas(request: Request):
+    """Vista para revisar facturas guardadas."""
     return templates.TemplateResponse(
-        "placeholder.html", {"request": request, "titulo": "Revisar Facturas"}
+        "facturas.html", {"request": request, "titulo": "Revisar Facturas"}
     )
 
 

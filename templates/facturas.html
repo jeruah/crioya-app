@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Revisar Facturas{% endblock %}
+{% block content %}
+<h2 class="mb-4">Revisar Facturas</h2>
+<form id="filtro-form" class="row g-3 mb-3">
+    <div class="col-auto">
+        <input type="date" id="fecha-inicio" class="form-control" placeholder="Inicio">
+    </div>
+    <div class="col-auto">
+        <input type="date" id="fecha-fin" class="form-control" placeholder="Fin">
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+    </div>
+</form>
+<table class="table table-striped" id="tabla-facturas">
+    <thead>
+        <tr>
+            <th>Número</th>
+            <th>Fecha</th>
+            <th>Cliente</th>
+            <th>Productos</th>
+            <th>Total</th>
+            <th>
+                <button id="exportar-excel" class="btn btn-success btn-sm">Exportar a Excel</button>
+            </th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+<script>
+async function cargarFacturas() {
+    const inicio = document.getElementById('fecha-inicio').value;
+    const fin = document.getElementById('fecha-fin').value;
+    let url = '/api/facturas';
+    const params = [];
+    if (inicio) params.push('start=' + inicio);
+    if (fin) params.push('end=' + fin);
+    if (params.length) url += '?' + params.join('&');
+    const resp = await fetch(url);
+    if (!resp.ok) return;
+    const datos = await resp.json();
+    const tbody = document.querySelector('#tabla-facturas tbody');
+    tbody.innerHTML = '';
+    datos.forEach(f => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${f.numero}</td>
+            <td>${new Date(f.fecha).toLocaleString()}</td>
+            <td>${f.cliente}</td>
+            <td><pre>${f.productos}</pre></td>
+            <td>${f.total}</td>
+            <td><a class="btn btn-secondary btn-sm" href="/api/facturas/${f.id}/pdf">PDF</a></td>
+        `;
+        tbody.appendChild(tr);
+    });
+    document.getElementById('exportar-excel').onclick = () => {
+        const excelUrl = '/api/facturas/excel' + (params.length ? '?' + params.join('&') : '');
+        window.location.href = excelUrl;
+    };
+}
+
+document.getElementById('filtro-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    cargarFacturas();
+});
+
+cargarFacturas();
+</script>
+{% endblock %}
