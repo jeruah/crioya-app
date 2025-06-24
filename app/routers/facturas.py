@@ -94,9 +94,14 @@ def generar_factura_desde_pedido(pedido: schemas.PedidoResponse, db: Session) ->
         total=total
     )
 
-    db.add(factura)
-    db.commit()
-    db.refresh(factura)
+    try:
+        db.add(factura)
+        db.commit()
+        db.refresh(factura)
+    except Exception as e:
+        db.rollback()
+        from ..errors import DatabaseError
+        raise DatabaseError("Error registrando la factura") from e
     return factura
 
 
