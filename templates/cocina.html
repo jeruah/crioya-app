@@ -185,12 +185,12 @@ document.getElementById("btnEliminar").onclick = function() {
         });
 
         // Notificación de que el pedido más antiguo ha sido realizado
+        showDesktopNotification("Orden realizada", `Orden N° ${numeroPedidoEliminado} realizada`);
+        playBeep();
         const notification = document.createElement("div");
         notification.classList.add("notification");
         notification.innerText = `Orden N° ${numeroPedidoEliminado} realizada`;  // Mostramos el número de pedido
         document.body.appendChild(notification);
-        showDesktopNotification("Orden realizada", `Orden N° ${numeroPedidoEliminado} realizada`);
-        playBeep();
 
         // Eliminar la notificación después de 5 segundos
         setTimeout(() => {

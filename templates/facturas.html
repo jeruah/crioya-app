@@ -12,6 +12,9 @@
     <div class="col-auto">
         <button type="submit" class="btn btn-primary">Filtrar</button>
     </div>
+    <div class="col-auto">
+        <button id="exportar-excel" class="btn btn-success">Exportar a Excel</button>
+    </div>
 </form>
 <table class="table table-striped" id="tabla-facturas">
     <thead>
@@ -21,9 +24,6 @@
             <th>Cliente</th>
             <th>Productos</th>
             <th>Total</th>
-            <th>
-                <button id="exportar-excel" class="btn btn-success btn-sm">Exportar a Excel</button>
-            </th>
         </tr>
     </thead>
     <tbody></tbody>
@@ -48,7 +48,7 @@ async function cargarFacturas() {
             <td>${f.numero}</td>
             <td>${new Date(f.fecha).toLocaleString()}</td>
             <td>${f.cliente}</td>
-            <td><pre>${f.productos}</pre></td>
+            <td><pre class="td-productos">${JSON.stringify(f.productos)}</pre></td>
             <td>${f.total}</td>
             <td><a class="btn btn-secondary btn-sm" href="/api/facturas/${f.id}/pdf">PDF</a></td>
         `;
@@ -67,4 +67,13 @@ document.getElementById('filtro-form').addEventListener('submit', (e) => {
 
 cargarFacturas();
 </script>
+    <style>
+        .td-productos {
+        max-width: 350px;
+        overflow: hidden;
+        white-space: pre;      /* Mantiene saltos de línea */
+        text-overflow: ellipsis;
+        display: block;        /* Necesario para que funcione el ellipsis con pre */
+    }
+    </style>
 {% endblock %}
