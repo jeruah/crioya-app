@@ -1,10 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from .. import models, schemas, dependencies
 from ..config import MENU_FORMULARIO  # 🛒 Importa el menú con precios
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
+import pandas as pd
+import io
+from fpdf import FPDF
 import pytz
+import time
 
 router = APIRouter()
 
@@ -18,6 +23,30 @@ def construir_diccionario_precios(menu: dict) -> dict:
 
 # Diccionario global de precios
 PRECIOS = construir_diccionario_precios(MENU_FORMULARIO)
+
+# Cache simple para evitar consultas repetidas
+CACHE_TTL = 300  # segundos
+_factura_cache: dict[str, object] = {"df": None, "time": 0.0}
+
+def _load_cache(db: Session) -> pd.DataFrame:
+    """Devuelve un DataFrame con las facturas, usando cache en memoria."""
+    now = time.time()
+    if _factura_cache["df"] is None or now - _factura_cache["time"] > CACHE_TTL:
+        facturas = db.query(models.Factura).all()
+        data = [
+            {
+                "id": f.id,
+                "numero": f.numero,
+                "fecha": f.fecha,
+                "cliente": f.cliente,
+                "productos": f.productos,
+                "total": f.total,
+            }
+            for f in facturas
+        ]
+        _factura_cache["df"] = pd.DataFrame(data)
+        _factura_cache["time"] = now
+    return _factura_cache["df"]
 
 def generar_factura_desde_pedido(pedido: schemas.PedidoResponse, db: Session) -> models.Factura:
     colombia = pytz.timezone("America/Bogota")
@@ -134,8 +163,74 @@ def generar_factura(pedido_id: int, db: Session = Depends(dependencies.get_db)):
     return factura'''
 
 
-# Devolver los datos de la base de datos de factura en json
-@router.get("/facturas", response_model=list[schemas.FacturaResponse])
-def listar_facturas(db: Session = Depends(dependencies.get_db)):
-    return db.query(models.Factura).all()
+# API de facturas con filtrado por fechas
+@router.get("/api/facturas", response_model=list[schemas.FacturaResponse])
+def listar_facturas(
+    start: str | None = None,
+    end: str | None = None,
+    db: Session = Depends(dependencies.get_db),
+):
+    df = _load_cache(db)
+    filtered = df
+    if start:
+        filtered = filtered[filtered["fecha"] >= pd.to_datetime(start)]
+    if end:
+        fecha_limite = pd.to_datetime(end) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
+        filtered = filtered[filtered["fecha"] <= fecha_limite]
+    data = filtered.to_dict(orient="records")
+    return [schemas.FacturaResponse(**row) for row in data]
+
+
+@router.get("/api/facturas/excel")
+def exportar_excel(
+    start: str | None = None,
+    end: str | None = None,
+    db: Session = Depends(dependencies.get_db),
+):
+    df = _load_cache(db)
+    if start:
+        df = df[df["fecha"] >= pd.to_datetime(start)]
+    if end:
+        fecha_limite = pd.to_datetime(end) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
+        df = df[df["fecha"] <= fecha_limite]
+    output = io.BytesIO()
+    df.to_excel(output, index=False)
+    output.seek(0)
+    headers = {
+        "Content-Disposition": "attachment; filename=facturas.xlsx"
+    }
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers=headers,
+    )
+
+
+@router.get("/api/facturas/{factura_id}/pdf")
+def descargar_pdf(factura_id: int, db: Session = Depends(dependencies.get_db)):
+    df = _load_cache(db)
+    fila = df[df["id"] == factura_id]
+    if fila.empty:
+        raise HTTPException(status_code=404, detail="Factura no encontrada")
+    factura = fila.iloc[0]
+    productos = json.loads(factura["productos"])
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(0, 10, f"Factura {factura['numero']}", ln=True, align="C")
+    pdf.set_font("Arial", size=12)
+    pdf.cell(0, 10, f"Fecha: {factura['fecha']}", ln=True)
+    pdf.cell(0, 10, f"Cliente: {factura['cliente']}", ln=True)
+    pdf.ln(5)
+    for item in productos:
+        detalle = f"{item.get('producto')} x{item.get('cantidad')} - {item.get('subtotal')}"
+        pdf.cell(0, 10, detalle, ln=True)
+    pdf.ln(5)
+    pdf.cell(0, 10, f"Total: {factura['total']}", ln=True)
+    pdf_bytes = pdf.output(dest="S").encode("latin-1")
+    headers = {
+        "Content-Disposition": f"attachment; filename=factura_{factura['numero']}.pdf"
+    }
+    return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf", headers=headers)
 
