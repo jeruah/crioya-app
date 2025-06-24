@@ -15,6 +15,7 @@ from geopy.distance import geodesic
 from .. import schemas
 from ..config import (
     templates,
+    render_template,
     PRODUCTS,
     ADICIONES,
     LOCATION_KEY,
@@ -28,6 +29,7 @@ from ..config import (
 from sqlalchemy.orm import Session
 from fastapi import Depends
 from .. import models, dependencies
+from ..errors import AppError
 import json
 
 router = APIRouter()
@@ -101,13 +103,15 @@ def _crear_pedido_response(
 
 @router.get("/atencion", response_class=HTMLResponse)
 async def atencion(request: Request):
-    return templates.TemplateResponse(
+    pedido_data = request.session.pop("pedido_data", None)
+    return render_template(
+        request,
         "pedidos.html",
         {
-            "request": request,
             "products": PRODUCTS,
             "adiciones": ADICIONES,
             "titulo": "Atenci\u00f3n al Cliente",
+            "pedido_data": pedido_data,
         },
     )
 
@@ -151,24 +155,25 @@ async def submit_atencion(
         domicilio,
     )
 
-    # 🧾 Generar la factura directamente (sin guardar pedido)
-    factura = generar_factura_desde_pedido(pedido, db)
-
-    # 🚩 Enviar el pedido a cocina en tiempo real
-    await nuevo_pedido(pedido)
+    try:
+        factura = generar_factura_desde_pedido(pedido, db)
+        await nuevo_pedido(pedido)
+    except Exception as e:
+        request.session["pedido_data"] = pedido.model_dump()
+        raise AppError("No se pudo procesar el pedido") from e
 
   
-    return templates.TemplateResponse(
-    "pedido_resumen.html",
-    {
-        "request": request,
-        "pedido": [item.dict() for item in pedido.pedido],
-        "nombre": pedido.nombre,
-        "telefono": pedido.telefono,
-        "direccion": pedido.direccion,
-        "domicilio": pedido.domicilio,
-    },
-)
+    return render_template(
+        request,
+        "pedido_resumen.html",
+        {
+            "pedido": [item.dict() for item in pedido.pedido],
+            "nombre": pedido.nombre,
+            "telefono": pedido.telefono,
+            "direccion": pedido.direccion,
+            "domicilio": pedido.domicilio,
+        },
+    )
 
 
 @router.get("/resumen", response_class=HTMLResponse)
@@ -180,15 +185,15 @@ async def resumen_pedido(request: Request, id: int, db: Session = Depends(depend
     productos = json.loads(factura.productos)
     print("DEBUG productos:", productos)  # <-- Agrega esta línea aquí
 
-    return templates.TemplateResponse(
+    return render_template(
+        request,
         "pedido_resumen.html",
         {
-            "request": request,
             "pedido": productos,
             "nombre": factura.cliente,
-            "telefono": "",  # opcional si quieres agregarlo en el futuro
-            "direccion": "", # opcional si lo guardas luego
-            "domicilio": False,  # por ahora puedes dejarlo así
+            "telefono": "",
+            "direccion": "",
+            "domicilio": False,
         },
     )
 
@@ -210,7 +215,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @router.get("/cocina", response_class=HTMLResponse)
 async def cocina(request: Request):
-    return templates.TemplateResponse("cocina.html", {"request": request, "token": STAFF_TOKEN})
+    return render_template(request, "cocina.html", {"token": STAFF_TOKEN})
 
 
 @router.post("/pedido", response_model=schemas.PedidoResponse)

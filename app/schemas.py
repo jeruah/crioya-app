@@ -48,8 +48,14 @@ class ConnectionManager:
         self.active_connections.remove(websocket)
 
     async def broadcast(self, message: str):
+        dead = []
         for connection in self.active_connections:
-            await connection.send_text(message)
+            try:
+                await connection.send_text(message)
+            except Exception:
+                dead.append(connection)
+        for connection in dead:
+            self.active_connections.remove(connection)
 
 
 # 🧾 Esquema que define cómo se verá un pedido cuando se devuelva desde la base de datos

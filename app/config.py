@@ -3,11 +3,19 @@ import ssl
 import certifi
 from dotenv import load_dotenv
 from fastapi.templating import Jinja2Templates
+from fastapi import Request
+from typing import Any
 from openai import AzureOpenAI
 
 load_dotenv()
 
 templates = Jinja2Templates(directory="templates")
+
+def render_template(request: Request, name: str, context: dict[str, Any] | None = None):
+    ctx = context or {}
+    ctx["request"] = request
+    ctx["error"] = request.session.pop("error", None)
+    return templates.TemplateResponse(name, ctx)
 ctx = ssl.create_default_context(cafile=certifi.where())
 LOCATION_KEY = os.getenv("LOCATION_KEY")
 AZURE_KEY = os.getenv("azure_key")

@@ -36,6 +36,7 @@
 
 <script>
 const PRODUCTS = {{ products | tojson }};
+const PRELOAD = {{ pedido_data | tojson | default('null') }};
 const PRODUCT_KEYS = {};
 Object.keys(PRODUCTS).forEach(key => {
     PRODUCT_KEYS[PRODUCTS[key].label] = key;
@@ -211,6 +212,36 @@ function agregarProducto() {
 
 document.addEventListener('DOMContentLoaded', () => {
     agregarProducto();
+    if (PRELOAD) {
+        telefonoInput.value = PRELOAD.telefono || '';
+        nombreInput.value = PRELOAD.nombre || '';
+        domicilioCheck.checked = PRELOAD.domicilio;
+        if (PRELOAD.domicilio) {
+            direccionInput.disabled = false;
+            direccionInput.value = PRELOAD.direccion || '';
+        }
+        document.getElementById('productos-container').innerHTML = '';
+        productoIndex = 0;
+        (PRELOAD.pedido || []).forEach(item => {
+            agregarProducto();
+            const idx = productoIndex - 1;
+            const row = document.getElementById('productos-container').lastElementChild;
+            row.querySelector('input[list="product-list"]').value = item.producto;
+            document.getElementById('producto-key-' + idx).value = PRODUCT_KEYS[item.producto] || '';
+            actualizarTamanos(PRODUCT_KEYS[item.producto] || '', idx);
+            row.querySelector('input[name="cantidades"]').value = item.cantidad;
+            row.querySelector('select[name="tamanos"]').value = item.tamano;
+            if (item.adicion && item.adicion.length) {
+                const container = row.querySelector('.adiciones-container');
+                item.adicion.forEach(ad => {
+                    container.insertBefore(crearAdicionFila(container.updateHidden), container.lastElementChild);
+                    container.querySelectorAll('input[list="adiciones-list"]')[container.querySelectorAll('input[list="adiciones-list"]').length-1].value = ad;
+                });
+                container.updateHidden();
+            }
+            row.querySelector('textarea[name="detalles"]').value = item.detalle || '';
+        });
+    }
 
     const domicilioCheck = document.getElementById('domicilio-check');
     const direccionInput = document.getElementById('direccion');
