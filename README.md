@@ -54,3 +54,20 @@ STAFF_TOKEN=
 ```
 
 Puede tomar como referencia el archivo `.env.example` incluido en el repositorio.
+
+## Despliegue con Docker en Render
+
+Para generar una imagen Docker ejecuta:
+
+```bash
+docker build -t crioya-app .
+```
+
+Luego puedes probarla localmente con:
+
+```bash
+docker run --env-file .env -p 8000:8000 crioya-app
+```
+
+En Render selecciona **New Web Service**, elige el entorno *Docker* y conecta el repositorio.
+La plataforma construirá la imagen usando el `Dockerfile` y expondrá el servicio en el puerto 8000.
