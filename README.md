@@ -71,3 +71,5 @@ docker run --env-file .env -p 8000:8000 crioya-app
 
 En Render selecciona **New Web Service**, elige el entorno *Docker* y conecta el repositorio.
 La plataforma construirá la imagen usando el `Dockerfile` y expondrá el servicio en el puerto 8000.
+
+Ademas para el desplliegue en Render, debe cambiar la linea ws:// as wss:// en cocina.html
