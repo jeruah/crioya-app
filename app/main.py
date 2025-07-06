@@ -7,6 +7,7 @@ import os
 from .routers import pages, pedido, clientes, facturas
 from .database import create_db_and_tables
 from .errors import AppError
+from . import models
 
 app = FastAPI()
 app.add_middleware(
