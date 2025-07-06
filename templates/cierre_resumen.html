@@ -25,18 +25,13 @@
 <form method="post" action="/cierre/confirmar">
     <input type="hidden" name="efectivo" value="{{ efectivo }}">
     <input type="hidden" name="digital" value="{{ digital }}">
-    <button type="submit" class="btn btn-success">Confirmar Cierre</button>
-    <a href="/cierre" class="btn btn-secondary">Volver</a>
-</form>
-
-<form method="post" action="/cierre/confirmar">
-    <input type="hidden" name="efectivo" value="{{ efectivo }}">
-    <input type="hidden" name="digital" value="{{ digital }}">
     <input type="hidden" name="total_facturado" value="{{ total_facturado }}">
     <input type="hidden" name="total_recibido" value="{{ total_recibido }}">
     <input type="hidden" name="diferencia" value="{{ diferencia }}">
     <input type="hidden" name="observacion" value="{{ observacion }}">
-    <button type="submit" class="btn btn-success mt-3">Confirmar y Guardar Cierre</button>
+    
+    <button type="submit" class="btn btn-success">Confirmar y Guardar Cierre</button>
+    <a href="/cierre" class="btn btn-secondary ms-2">Volver</a>
 </form>
 
 {% endblock %}
