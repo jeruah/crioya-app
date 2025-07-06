@@ -65,7 +65,7 @@
 </style>
 
 <script>
-    const socket = new WebSocket("wss://" + window.location.host + "/ws/cocina?token={{ token }}");
+    const socket = new WebSocket("ws://" + window.location.host + "/ws/cocina?token={{ token }}");
 
     // Solicitar permiso para notificaciones al cargar la pagina
     if ("Notification" in window && Notification.permission === "default") {
