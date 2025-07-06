@@ -41,3 +41,17 @@ class Factura(Base):
     cliente = Column(String, nullable=False)
     productos = Column(Text, nullable=False)  # JSON serializado con productos
     total = Column(Float, nullable=False)
+
+
+# Modelo para el cierre de caja
+class CierreCaja(Base):
+    __tablename__ = "cierres_caja"
+
+    id = Column(Integer, primary_key=True, index=True)
+    fecha = Column(DateTime, default=hora_colombia)
+    efectivo = Column(Float, nullable=False)
+    digital = Column(Float, nullable=False)
+    total_recibido = Column(Float, nullable=False)
+    total_facturado = Column(Float, nullable=False)
+    diferencia = Column(Float, nullable=False)
+    observaciones = Column(Text, nullable=True)

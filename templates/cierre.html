@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Cierre de Caja{% endblock %}
+{% block content %}
+<h2 class="mb-4">🧾 Cierre de Caja Diario</h2>
+
+<form method="post" action="/cierre" class="row g-3">
+    <div class="col-md-4">
+        <label for="efectivo" class="form-label">Efectivo recibido</label>
+        <input type="text" name="efectivo" class="form-control" inputmode="decimal" pattern="[0-9]+([.,][0-9]{1,2})?" required>
+    </div>
+    <div class="col-md-4">
+        <label for="digital" class="form-label">Pagos digitales</label>
+        <input type="text" name="digital" class="form-control" inputmode="decimal" pattern="[0-9]+([.,][0-9]{1,2})?" required>
+    </div>
+    <div class="col-12 mt-3">
+        <button type="submit" class="btn btn-primary">Generar Cierre</button>
+    </div>
+</form>
+{% endblock %}

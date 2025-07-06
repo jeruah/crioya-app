@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Histórico de Cierres{% endblock %}
+{% block content %}
+<h2 class="mb-4">📅 Histórico de Cierres de Caja</h2>
+
+<form method="get" class="row g-3 mb-4">
+    <div class="col-auto">
+        <input type="date" name="start" class="form-control" value="{{ fecha_inicio }}">
+    </div>
+    <div class="col-auto">
+        <input type="date" name="end" class="form-control" value="{{ fecha_fin }}">
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+    </div>
+</form>
+
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>Fecha</th>
+            <th>Efectivo</th>
+            <th>Digital</th>
+            <th>Total Recibido</th>
+            <th>Total Facturado</th>
+            <th>Diferencia</th>
+            <th>Observaciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for cierre in cierres %}
+        <tr>
+            <td>{{ cierre.fecha.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+            <td>${{ '%.2f'|format(cierre.efectivo) }}</td>
+            <td>${{ '%.2f'|format(cierre.digital) }}</td>
+            <td>${{ '%.2f'|format(cierre.total_recibido) }}</td>
+            <td>${{ '%.2f'|format(cierre.total_facturado) }}</td>
+            <td style="color: {{ 'red' if cierre.diferencia != 0 else 'green' }};">
+                ${{ '%.2f'|format(cierre.diferencia) }}
+            </td>
+            <td>{{ cierre.observaciones }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if cierres|length == 0 %}
+<p class="text-muted">No se encontraron cierres para el rango seleccionado.</p>
+{% endif %}
+{% endblock %}

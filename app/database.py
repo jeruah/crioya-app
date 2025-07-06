@@ -3,7 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from dotenv import load_dotenv
 import os
-from . import models
+
 
 # Load environment variables from .env
 load_dotenv()
@@ -28,6 +28,7 @@ Base = declarative_base()
 
 def create_db_and_tables():
     #Base.metadata.drop_all(engine)
+    from . import models
     Base.metadata.create_all(engine)
 
 # Comentario prueba
