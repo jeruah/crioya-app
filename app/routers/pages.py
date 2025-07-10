@@ -58,13 +58,19 @@ async def cierre_preview(
     digital: float = Form(...),
     db: Session = Depends(dependencies.get_db),
 ):
-    # Obtener fecha actual en zona horaria Colombia
+    
+    # Obtener fecha de hoy en formato YYYYMMDD
     colombia = pytz.timezone("America/Bogota")
-    ahora = datetime.now(colombia)
-    inicio_dia = ahora.replace(hour=0, minute=0, second=0, microsecond=0)
+    hoy_str = datetime.now(colombia).strftime("%Y%m%d")
 
-    # Consultar todas las facturas de hoy
-    facturas_hoy = db.query(models.Factura).filter(models.Factura.fecha >= inicio_dia).all()
+    # Buscar facturas cuyo número contenga la fecha de hoy
+    facturas_hoy = db.query(models.Factura).filter(models.Factura.numero.contains(hoy_str)).all()
+
+    # Validar si no hay facturas
+    if not facturas_hoy:
+        request.session["error"] = "No se puede generar el cierre porque no hay facturas registradas para hoy."
+        return RedirectResponse("/cierre", status_code=303)
+
     total_facturado = sum(f.total for f in facturas_hoy)
     num_facturas = len(facturas_hoy)
 
@@ -123,6 +129,9 @@ async def confirmar_cierre(
     request.session["success"] = "✅ Cierre de caja registrado exitosamente"
     return RedirectResponse("/cierre", status_code=303)
 
+from_zone = pytz.timezone("America/Bogota")
+
+
 @router.get("/cierres", response_class=HTMLResponse)
 async def ver_cierres(
     request: Request,
@@ -134,8 +143,8 @@ async def ver_cierres(
     fecha_inicio = datetime.strptime(start, "%Y-%m-%d").date() if start else hoy
     fecha_fin = datetime.strptime(end, "%Y-%m-%d").date() if end else hoy
 
-    inicio_dt = datetime.combine(fecha_inicio, datetime.min.time()).replace(tzinfo=pytz.timezone("America/Bogota"))
-    fin_dt = datetime.combine(fecha_fin + timedelta(days=1), datetime.min.time()).replace(tzinfo=pytz.timezone("America/Bogota"))
+    inicio_dt = datetime.combine(fecha_inicio, datetime.min.time()).replace(tzinfo=pytz.utc)
+    fin_dt = datetime.combine(fecha_fin + timedelta(days=1), datetime.min.time()).replace(tzinfo=pytz.utc)
 
     cierres = (
         db.query(models.CierreCaja)
@@ -144,15 +153,32 @@ async def ver_cierres(
         .all()
     )
 
+    timezone = pytz.timezone("America/Bogota")
+    cierres_colombia = [
+    {
+        "fecha_local": cierre.fecha.astimezone(timezone),
+        "efectivo": cierre.efectivo,
+        "digital": cierre.digital,
+        "total_recibido": cierre.total_recibido,
+        "total_facturado": cierre.total_facturado,
+        "diferencia": cierre.diferencia,
+        "observaciones": cierre.observaciones,
+    }
+    for cierre in cierres
+    ]
+
     return render_template(
         request,
         "cierres_historico.html",
         {
-            "cierres": cierres,
-            "fecha_inicio": fecha_inicio.isoformat(),
-            "fecha_fin": fecha_fin.isoformat(),
+        "cierres": cierres_colombia,
+        "fecha_inicio": fecha_inicio.isoformat(),
+        "fecha_fin": fecha_fin.isoformat(),
         },
     )
+
+
+
 
 @router.get("/api/cierres")
 async def api_cierres(

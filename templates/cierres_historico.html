@@ -30,7 +30,7 @@
     <tbody>
         {% for cierre in cierres %}
         <tr>
-            <td>{{ cierre.fecha.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+            <td>{{ cierre.fecha_local.strftime("%Y-%m-%d %H:%M:%S") }}</td>
             <td>${{ '%.2f'|format(cierre.efectivo) }}</td>
             <td>${{ '%.2f'|format(cierre.digital) }}</td>
             <td>${{ '%.2f'|format(cierre.total_recibido) }}</td>
@@ -41,6 +41,7 @@
             <td>{{ cierre.observaciones }}</td>
         </tr>
         {% endfor %}
+
     </tbody>
 </table>
 
