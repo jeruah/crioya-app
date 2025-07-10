@@ -317,7 +317,8 @@ def descargar_pdf(factura_id: int, db: Session = Depends(dependencies.get_db)):
     pdf.cell(0, 10, f"Fecha: {fecha_local.strftime('%d/%m/%Y %I:%M:%S %p')}", ln=True)
 
     # Productos en la factura
-    pdf.ln(10)  # Espacio entre la fecha y los productos
+    pdf.ln(10)
+
     pdf.set_font("Arial", "B", 12)
     pdf.set_fill_color(211, 211, 211)
     pdf.cell(50, 10, "Producto", border=1, align='C', fill=True)
