@@ -10,6 +10,7 @@ import io
 from fpdf import FPDF
 import pytz
 import time
+from io import BytesIO
 
 router = APIRouter()
 
@@ -288,24 +289,69 @@ def descargar_pdf(factura_id: int, db: Session = Depends(dependencies.get_db)):
     factura = fila.iloc[0]
     productos = json.loads(factura["productos"])
 
+    # Crear el objeto PDF
     pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)  # Permitir que el PDF tenga un margen de 15mm
     pdf.add_page()
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, f"Factura {factura['numero']}", ln=True, align="C")
+
+    # Establecer los márgenes del documento
+    pdf.set_left_margin(15)
+    pdf.set_right_margin(15)
+
+    # Título de la factura
+    pdf.set_font("Arial", "B", 20)
+    pdf.set_text_color(255, 0, 0)  # Color azul oscuro para el título
+    pdf.cell(0, 10, f"Factura #{factura['numero']}", ln=True, align="C")
+
+    # Información del cliente y la factura
+    pdf.ln(10)  # Salto de línea
     pdf.set_font("Arial", size=12)
+    pdf.set_text_color(0, 0, 0)  # Texto negro para los detalles
     pdf.cell(0, 10, f"Cliente: {factura['cliente']}", ln=True)
-    pdf.ln(5)
-    for item in productos:
-        detalle = f"{item.get('producto')} x{item.get('cantidad')} - {item.get('subtotal')}"
-        pdf.cell(0, 10, detalle, ln=True)
-    pdf.ln(5)
+
+    # Fecha de la factura con formato bonito
     from_zone = pytz.timezone("America/Bogota")
-    fecha_local = factura["fecha"].astimezone(from_zone)
+    fecha_local = factura["fecha"].astimezone(from_zone) if isinstance(factura["fecha"],
+                                                                       datetime) else datetime.fromisoformat(
+        factura["fecha"]).astimezone(from_zone)
     pdf.cell(0, 10, f"Fecha: {fecha_local.strftime('%d/%m/%Y %I:%M:%S %p')}", ln=True)
 
-    pdf_bytes = pdf.output(dest="S").encode("latin-1")
-    headers = {
-        "Content-Disposition": f"attachment; filename=factura_{factura['numero']}.pdf"
-    }
-    return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf", headers=headers)
+    # Productos en la factura
+    pdf.ln(10)  # Espacio entre la fecha y los productos
+    pdf.set_font("Arial", "B", 12)
+    pdf.set_fill_color(211, 211, 211)
+    pdf.cell(50, 10, "Producto", border=1, align='C', fill=True)
+    pdf.cell(30, 10, "Cantidad", border=1, align='C', fill=True)
+    pdf.cell(40, 10, "Precio Unitario", border=1, align='C', fill=True)
+    pdf.cell(30, 10, "Adiciones", border=1, align='C', fill=True)
+    pdf.cell(30, 10, "Subtotal", border=1, align='C', fill=True)
+    pdf.ln()
 
+
+
+    # Agregar cada producto con su detalle
+    pdf.set_font("Arial", size=12)
+    for item in productos:
+        adiciones_texto = ', '.join([adicion['nombre'] for adicion in item.get('adiciones', [])])
+
+        pdf.cell(50, 10, item.get('producto'), border=1, align='L')
+        pdf.cell(30, 10, str(item.get('cantidad')), border=1, align='C')
+        pdf.cell(40, 10, f"${item.get('precio_unitario')}", border=1, align='C')
+        pdf.cell(30, 10, f"{adiciones_texto}", border=1, align='C')
+        pdf.cell(30, 10, f"${item.get('subtotal')}", border=1, align='C')
+        pdf.ln()
+
+    # Total
+    pdf.ln(10)
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(0, 10, f"Total: ${factura['total']}", ln=True, align='R')
+
+    # Finalizar y enviar el PDF
+    pdf_bytes = pdf.output(dest="S").encode("latin-1")
+    pdf_file = BytesIO(pdf_bytes)
+
+    headers = {
+        "Content-Disposition": f"attachment; filename=factura_{factura['numero']}.pdf",
+        "Content-Type": "application/pdf"
+    }
+    return StreamingResponse(pdf_file, media_type="application/pdf", headers=headers)
