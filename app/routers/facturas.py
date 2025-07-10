@@ -44,9 +44,12 @@ def _load_cache(db: Session) -> pd.DataFrame:
             }
             for f in facturas
         ]
-        _factura_cache["df"] = pd.DataFrame(data)
+        df = pd.DataFrame(data)
+        df["fecha"] = pd.to_datetime(df["fecha"]).dt.tz_localize("UTC")  # 🔧 Fix aquí
+        _factura_cache["df"] = df
         _factura_cache["time"] = now
     return _factura_cache["df"]
+
 
 def generar_factura_desde_pedido(pedido: schemas.PedidoResponse, db: Session) -> models.Factura:
     colombia = pytz.timezone("America/Bogota")
@@ -169,7 +172,7 @@ def generar_factura(pedido_id: int, db: Session = Depends(dependencies.get_db)):
 
 
 # API de facturas con filtrado por fechas
-@router.get("/api/facturas", response_model=list[schemas.FacturaResponse])
+'''@router.get("/api/facturas", response_model=list[schemas.FacturaResponse])
 def listar_facturas(
     start: str | None = None,
     end: str | None = None,
@@ -187,10 +190,33 @@ def listar_facturas(
     for row in data:
         if isinstance(row["productos"], str):
             row["productos"] = json.loads(row["productos"])
+    return [schemas.FacturaResponse(**row) for row in data]'''
+from_zone = pytz.timezone("America/Bogota")
+
+@router.get("/api/facturas", response_model=list[schemas.FacturaResponse])
+def listar_facturas(
+    start: str | None = None,
+    end: str | None = None,
+    db: Session = Depends(dependencies.get_db),
+):
+    df = _load_cache(db)
+    filtered = df
+    if start:
+        start_dt = from_zone.localize(datetime.strptime(start, "%Y-%m-%d"))
+        start_utc = start_dt.astimezone(pytz.utc)
+        filtered = filtered[filtered["fecha"] >= start_utc]
+    if end:
+        end_dt = from_zone.localize(datetime.strptime(end, "%Y-%m-%d") + timedelta(days=1))
+        end_utc = end_dt.astimezone(pytz.utc)
+        filtered = filtered[filtered["fecha"] < end_utc]
+
+    data = filtered.to_dict(orient="records")
+    for row in data:
+        if isinstance(row["productos"], str):
+            row["productos"] = json.loads(row["productos"])
     return [schemas.FacturaResponse(**row) for row in data]
 
-
-@router.get("/api/facturas/excel")
+'''@router.get("/api/facturas/excel")
 def exportar_excel(
     start: str | None = None,
     end: str | None = None,
@@ -212,7 +238,45 @@ def exportar_excel(
         output,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers=headers,
+    )'''
+@router.get("/api/facturas/excel")
+def exportar_excel(
+    start: str | None = None,
+    end: str | None = None,
+    db: Session = Depends(dependencies.get_db),
+):
+    df = _load_cache(db)
+
+    # Convertir fechas de filtro a UTC
+    if start:
+        start_dt = from_zone.localize(datetime.strptime(start, "%Y-%m-%d"))
+        start_utc = start_dt.astimezone(pytz.utc)
+        df = df[df["fecha"] >= start_utc]
+    if end:
+        end_dt = from_zone.localize(datetime.strptime(end, "%Y-%m-%d") + timedelta(days=1))
+        end_utc = end_dt.astimezone(pytz.utc)
+        df = df[df["fecha"] < end_utc]
+
+    # Convertir columna 'fecha' a hora local (Bogotá) y formato amigable
+    if "fecha" in df.columns:
+        df["fecha"] = pd.to_datetime(df["fecha"], utc=True)
+        df["fecha"] = df["fecha"].dt.tz_convert("America/Bogota")
+        df["fecha"] = df["fecha"].dt.tz_localize(None)  # Necesario para Excel
+        df["fecha"] = df["fecha"].dt.strftime("%d/%m/%Y %I:%M:%S %p")
+
+    # Exportar a Excel
+    output = io.BytesIO()
+    df.to_excel(output, index=False)
+    output.seek(0)
+    headers = {
+        "Content-Disposition": "attachment; filename=facturas.xlsx"
+    }
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers=headers,
     )
+
 
 
 @router.get("/api/facturas/{factura_id}/pdf")
@@ -229,14 +293,16 @@ def descargar_pdf(factura_id: int, db: Session = Depends(dependencies.get_db)):
     pdf.set_font("Arial", "B", 16)
     pdf.cell(0, 10, f"Factura {factura['numero']}", ln=True, align="C")
     pdf.set_font("Arial", size=12)
-    pdf.cell(0, 10, f"Fecha: {factura['fecha']}", ln=True)
     pdf.cell(0, 10, f"Cliente: {factura['cliente']}", ln=True)
     pdf.ln(5)
     for item in productos:
         detalle = f"{item.get('producto')} x{item.get('cantidad')} - {item.get('subtotal')}"
         pdf.cell(0, 10, detalle, ln=True)
     pdf.ln(5)
-    pdf.cell(0, 10, f"Total: {factura['total']}", ln=True)
+    from_zone = pytz.timezone("America/Bogota")
+    fecha_local = factura["fecha"].astimezone(from_zone)
+    pdf.cell(0, 10, f"Fecha: {fecha_local.strftime('%d/%m/%Y %I:%M:%S %p')}", ln=True)
+
     pdf_bytes = pdf.output(dest="S").encode("latin-1")
     headers = {
         "Content-Disposition": f"attachment; filename=factura_{factura['numero']}.pdf"

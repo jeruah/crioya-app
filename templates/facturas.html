@@ -52,7 +52,13 @@ async function cargarFacturas() {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${f.numero}</td>
-            <td>${new Date(f.fecha).toLocaleString()}</td>
+            <td>${
+                new Intl.DateTimeFormat('es-CO', {
+                    dateStyle: 'short',
+                    timeStyle: 'medium',
+                    timeZone: 'America/Bogota'
+                    }).format(new Date(f.fecha))
+            }</td>
             <td>${f.cliente}</td>
             <td><pre class="td-productos">${JSON.stringify(f.productos)}</pre></td>
             <td>${f.total}</td>
