@@ -316,7 +316,7 @@ def descargar_pdf(factura_id: int, db: Session = Depends(dependencies.get_db)):
         factura["fecha"]).astimezone(from_zone)
     pdf.cell(0, 10, f"Fecha: {fecha_local.strftime('%d/%m/%Y %I:%M:%S %p')}", ln=True)
 
-    # Productos en la factura
+
     pdf.ln(10)
 
     pdf.set_font("Arial", "B", 12)
