@@ -12,7 +12,7 @@ from datetime import datetime
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
-
+#hola
 INSUMOS_PREDEFINIDOS = [
     {"nombre": "Papas Criolla", "unidad": "kg", "minimo": 100},
     {"nombre": "Papa Normal", "unidad": "kg", "minimo": 100},
