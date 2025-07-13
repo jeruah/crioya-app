@@ -11,6 +11,7 @@ load_dotenv()
 
 templates = Jinja2Templates(directory="templates")
 
+# esto es un comentario
 def render_template(request: Request, name: str, context: dict[str, Any] | None = None):
     ctx = context or {}
     ctx["request"] = request
