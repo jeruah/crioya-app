@@ -3,11 +3,16 @@ from starlette.middleware.sessions import SessionMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 import logging
 import os
-
-from .routers import pages, pedido, clientes, facturas
+from app.routers import pages, pedido, clientes, facturas
 from .database import create_db_and_tables
 from .errors import AppError
 from . import models
+from app.routers import inventario
+
+import uvicorn
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", reload=True, debug=True)
 
 app = FastAPI()
 app.add_middleware(
@@ -41,5 +46,8 @@ app.include_router(pages.router)
 app.include_router(pedido.router)
 app.include_router(clientes.router)
 app.include_router(facturas.router)
+app.include_router(inventario.router)
+
+ 
 
 create_db_and_tables()

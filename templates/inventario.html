@@ -1,0 +1,127 @@
+ {% extends "base.html" %}
+{% block title %}Gestión de Inventario{% endblock %}
+{% block content %}
+
+<h2 class="mb-4">📦 Inventario de Insumos</h2>
+
+<!-- Botón para ir al historial -->
+<form action="/historial" method="get" class="mb-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label for="fecha" class="form-label">📅 Selecciona una fecha para ver el historial:</label>
+            <input
+                type="date"
+                id="fecha"
+                name="fecha"
+                class="form-control"
+                value="{{ fecha_actual | default('') }}"
+                required
+            >
+        </div>
+        <div class="col-md-2 d-grid">
+            <button type="submit" class="btn btn-info">Ver Historial</button>
+        </div>
+    </div>
+</form>
+
+<!-- Registro de entrada -->
+<form action="/inventario/entrada" method="post" class="border p-3 rounded mb-4 bg-light">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-5">
+            <label class="form-label">Insumo</label>
+            <select name="nombre" class="form-select" required>
+    {% for item in predefinidos %}
+        <option value="{{ item.nombre }}">{{ item.nombre }}</option>
+    {% endfor %}
+</select>
+
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Cantidad a ingresar (Kg) </label>
+            <input name="cantidad" type="number" step="0.01" class="form-control" placeholder="Ej. 1.5" required>
+        </div>
+        <div class="col-md-3 d-grid">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-1"></i> Registrar Entrada
+            </button>
+        </div>
+    </div>
+</form>
+
+<!-- Formulario para agregar un nuevo insumo -->
+<form action="/inventario/agregar" method="post" class="border p-3 rounded mb-4 bg-light">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label">Nombre del insumo</label>
+            <input name="nombre" type="text" class="form-control" required>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Unidad</label>
+            <input name="unidad" type="text" class="form-control" placeholder="Ej. kg, L" required>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Cantidad inicial</label>
+            <input name="cantidad" type="number" step="0.01" class="form-control" required>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Mínimo</label>
+            <input name="minimo" type="number" step="0.01" class="form-control" required>
+        </div>
+        <div class="col-md-2 d-grid">
+            <button type="submit" class="btn btn-primary">
+                Agregar Insumo
+            </button>
+        </div>
+    </div>
+</form>
+
+
+<!-- Tabla de inventario -->
+<div class="table-responsive">
+    <table class="table table-bordered table-hover align-middle">
+        <thead style="background-color: #d6ecff; color: #1a3c5a; text-align: center;">
+            <tr>
+                <th> Insumo</th>
+                <th> Disponible</th>
+                <th> Unidad</th>
+                <th> Mínimo</th>
+                <th>🔔 Alerta</th>
+                <th>✏️ Editar</th>
+                <th>🗑️ Eliminar</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ins in insumos %}
+            <tr class="text-center {% if ins.alerta %}table-danger{% else %}table-success{% endif %}">
+                <td class="text-start">{{ ins.nombre }}</td>
+                <td>{{ "%.2f"|format(ins.disponible) }}</td>
+                <td>{{ ins.unidad }}</td>
+                <td>{{ ins.minimo }}</td>
+                <td>
+                    {% if ins.alerta %}
+                        <span class="text-danger fw-bold">🔴 Bajo</span>
+                    {% else %}
+                        <span class="text-success fw-bold">✅ </span>
+                    {% endif %}
+                </td>
+                <!-- Editar disponible -->
+                <td>
+                    <form method="post" action="/inventario/editar/{{ ins.id }}" class="d-flex gap-2 justify-content-center">
+                        <input type="number" name="cantidad" class="form-control form-control-sm w-50" value="{{ ins.disponible }}" step="0.01" required>
+                        <button type="submit" class="btn btn-primary btn-sm">Actualizar</button>
+                    </form>
+                </td>
+                <!-- Eliminar insumo -->
+                <td>
+                    <form method="post" action="/inventario/eliminar/{{ ins.id }}" onsubmit="return confirm('¿Eliminar este insumo?');">
+                        <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}
