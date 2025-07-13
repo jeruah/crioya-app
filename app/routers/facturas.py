@@ -100,7 +100,7 @@ def generar_factura_desde_pedido(pedido: schemas.PedidoResponse, db: Session) ->
 
     try:
         db.add(factura)
-        db.commit()
+        db.flush()  # se obtiene el ID sin cerrar la transacción
         db.refresh(factura)
     except Exception as e:
         db.rollback()
