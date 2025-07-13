@@ -136,30 +136,48 @@ from .. import models
 from sqlalchemy.orm import Session
 
 def aplicar_consumo_por_venta(producto_id: str, cantidad: int, db: Session):
+    """Descuenta del inventario los insumos usados en la venta de un producto."""
     from ..config import MENU_FORMULARIO  # usamos el menú original para ver el consumo real
+
+    if cantidad <= 0:
+        raise AppError("La cantidad de productos debe ser mayor a cero")
 
     for categoria in MENU_FORMULARIO.values():
         for item in categoria:
             if item["id"] == producto_id:
                 consumo = item.get("consumo", {})
                 print(f"⚙️ Consumo encontrado: {consumo}")
-                for insumo_nombre, cantidad_usada in consumo.items():
-                    insumo = db.query(models.Insumo).filter_by(nombre=insumo_nombre).first()
-                    if insumo:
-                        total = cantidad_usada * cantidad
-                        salida = models.SalidaInsumo(insumo_id=insumo.id, cantidad=total)
-                        db.add(salida)
 
-                        mov = models.MovimientoInsumo(
-                            insumo_id=insumo.id,
-                            tipo="salida",
-                            cantidad=total,
-                        )
-                        db.add(mov)
-                        print(f"✅ Movimiento registrado: {insumo_nombre} - {total}")
-                    else:
+                # 🔍 Obtener todos los insumos en una sola consulta
+                nombres = list(consumo.keys())
+                insumos = db.query(models.Insumo).filter(models.Insumo.nombre.in_(nombres)).all()
+                mapa_insumos = {i.nombre: i for i in insumos}
+
+                for insumo_nombre, cantidad_usada in consumo.items():
+                    insumo = mapa_insumos.get(insumo_nombre)
+                    if not insumo:
                         print(f"⚠️ Insumo '{insumo_nombre}' no encontrado.")
-                db.commit()  # ← aquí lo pones, dentro de la función y con la variable `db` ya recibida
+                        continue
+
+                    total = cantidad_usada * cantidad
+                    if total <= 0:
+                        continue
+
+                    # ✅ Validar stock disponible
+                    disponible = sum(e.cantidad for e in insumo.entradas) - sum(s.cantidad for s in insumo.salidas)
+                    if disponible < total:
+                        raise AppError(f"Stock insuficiente de {insumo_nombre}")
+
+                    salida = models.SalidaInsumo(insumo_id=insumo.id, cantidad=total)
+                    db.add(salida)
+
+                    mov = models.MovimientoInsumo(
+                        insumo_id=insumo.id,
+                        tipo="salida",
+                        cantidad=total,
+                    )
+                    db.add(mov)
+                    print(f"✅ Movimiento registrado: {insumo_nombre} - {total}")
                 break
 
 
@@ -212,9 +230,13 @@ async def submit_atencion(
             else:
                 print(f"⚠️ No se encontró ID para producto '{item.producto}'")
 
+        # 💾 Confirmar todos los cambios de la transacción
+        db.commit()
+
         await nuevo_pedido(pedido)
 
     except Exception as e:
+        db.rollback()
         request.session["pedido_data"] = pedido.model_dump()
         raise AppError("No se pudo procesar el pedido") from e
 
