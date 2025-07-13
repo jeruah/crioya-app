@@ -2,9 +2,9 @@ from fastapi import APIRouter, Request, Form, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from app.database import get_db
+from app.dependencies import get_db
 from app import models
-from datetime import date
+from datetime import date, timedelta
 from sqlalchemy import cast, Date
 from fastapi import Query
 from datetime import date
@@ -12,7 +12,7 @@ from datetime import datetime
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
-#hola
+# h
 INSUMOS_PREDEFINIDOS = [
     {"nombre": "Papas Criolla", "unidad": "kg", "minimo": 100},
     {"nombre": "Papa Normal", "unidad": "kg", "minimo": 100},
@@ -46,7 +46,7 @@ INSUMOS_PREDEFINIDOS = [
     {"nombre": "Saborizantes", "unidad": "kg", "minimo": 2},
     {"nombre": "Hielo", "unidad": "kg", "minimo": 5},
     {"nombre": "Cocacola 300ml", "unidad": "unidad", "minimo": 10},
-    {"nombre": "Productos Postobon 1.5 Litros", "unidad": "unidad", "minimo": 5},
+    {"nombre": "Productos Postobon 1.5 Litros", "unidad": "unidad", "minimo": 5, },
 ]
 
 
@@ -73,16 +73,16 @@ def ver_inventario(request: Request, db: Session = Depends(get_db)):
             "request": request,
             "insumos": datos,
             "predefinidos": INSUMOS_PREDEFINIDOS,
-            "fecha_actual": date.today().isoformat() 
+            "fecha_actual": date.today().isoformat()
         })
     except Exception as e:
         print("💥 ERROR:", e)
         raise e
 
 
-
 @router.post("/inventario/agregar")
-def agregar(nombre: str = Form(...), unidad: str = Form(...), cantidad: float = Form(...), minimo: float = Form(...), db: Session = Depends(get_db)):
+def agregar(nombre: str = Form(...), unidad: str = Form(...), cantidad: float = Form(...), minimo: float = Form(...),
+            db: Session = Depends(get_db)):
     nuevo = models.Insumo(nombre=nombre, unidad=unidad, minimo=minimo)
     db.add(nuevo)
     db.commit()
@@ -129,11 +129,6 @@ def entrada(nombre: str = Form(...), cantidad: float = Form(...), db: Session = 
     return RedirectResponse("/inventario", status_code=303)
 
 
-
-
-
-
-
 @router.post("/inventario/editar/{insumo_id}")
 def editar(insumo_id: int, cantidad: float = Form(...), db: Session = Depends(get_db)):
     db.query(models.EntradaInsumo).filter_by(insumo_id=insumo_id).delete()
@@ -150,7 +145,6 @@ def editar(insumo_id: int, cantidad: float = Form(...), db: Session = Depends(ge
     return RedirectResponse("/inventario", status_code=303)
 
 
-
 @router.post("/inventario/eliminar/{insumo_id}")
 def eliminar(insumo_id: int, db: Session = Depends(get_db)):
     # ✅ Registrar en historial antes de eliminar
@@ -164,10 +158,11 @@ def eliminar(insumo_id: int, db: Session = Depends(get_db)):
 
 from sqlalchemy import and_, func
 
+
 @router.get("/historial")
 def ver_historial(request: Request, fecha: date = Query(...), db: Session = Depends(get_db)):
     inicio = datetime.combine(fecha, datetime.min.time())  # 00:00:00
-    fin = datetime.combine(fecha, datetime.max.time())     # 23:59:59.999999
+    fin = datetime.combine(fecha, datetime.max.time())  # 23:59:59.999999
 
     movimientos = db.query(models.MovimientoInsumo).filter(
         and_(
@@ -181,3 +176,49 @@ def ver_historial(request: Request, fecha: date = Query(...), db: Session = Depe
         "fecha": fecha,
         "movimientos": movimientos
     })
+
+
+@router.get("/inventario/estimado_gasto", tags=["inventario"])
+def estimado_gasto_insumos(
+        db: Session = Depends(get_db),
+        desde: datetime = Query(None, description="Fecha inicio (YYYY-MM-DD)"),
+        hasta: datetime = Query(None, description="Fecha final (YYYY-MM-DD)")
+):
+    """
+    Retorna el gasto estimado de insumos (salidas) en el rango de fechas dado.
+    Si no se pasan fechas, calcula desde el inicio de la semana hasta ahora.
+    """
+    now = datetime.now()
+    if hasta is None:
+        hasta = now
+    if desde is None:
+        # calcular inicio de semana (lunes)
+        desde = now - timedelta(days=now.weekday())
+        desde = desde.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # Consulta los movimientos tipo 'SALIDA' en el rango de fechas
+    movimientos = (
+        db.query(models.MovimientoInsumo)
+        .filter(
+            models.MovimientoInsumo.tipo == "SALIDA",
+            models.MovimientoInsumo.fecha >= desde,
+            models.MovimientoInsumo.fecha <= hasta
+        )
+        .all()
+    )
+
+    # Sumar por insumo
+    resumen = {}
+    total_general = 0
+    for mov in movimientos:
+        insumo_id = mov.insumo_id
+        cantidad = mov.cantidad
+        resumen[insumo_id] = resumen.get(insumo_id, 0) + cantidad
+        total_general += cantidad
+
+    return {
+        "desde": desde.isoformat(),
+        "hasta": hasta.isoformat(),
+        "total_general": total_general,
+        "detalle_por_insumo": resumen
+    }
