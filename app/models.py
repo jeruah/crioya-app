@@ -4,6 +4,10 @@ from sqlalchemy import Boolean, Text
 from .database import Base
 from datetime import datetime
 import pytz
+from sqlalchemy.orm import relationship
+from sqlalchemy import ForeignKey
+
+
 
 class Cliente(Base):
     __tablename__ = "clientes"
@@ -55,3 +59,52 @@ class CierreCaja(Base):
     total_facturado = Column(Float, nullable=False)
     diferencia = Column(Float, nullable=False)
     observaciones = Column(Text, nullable=True)
+
+
+#Paulina
+
+class EntradaInsumo(Base):
+    __tablename__ = "entradas_insumo"
+    id = Column(Integer, primary_key=True)
+    insumo_id = Column(Integer, ForeignKey("insumos.id"))
+    cantidad = Column(Float, nullable=False)
+    fecha = Column(DateTime, default=datetime.now)
+
+    insumo = relationship("Insumo", back_populates="entradas")
+
+class SalidaInsumo(Base):
+    __tablename__ = "salidas_insumo"
+    id = Column(Integer, primary_key=True)
+    insumo_id = Column(Integer, ForeignKey("insumos.id"))
+    cantidad = Column(Float, nullable=False)
+    fecha = Column(DateTime, default=datetime.now)
+
+    insumo = relationship("Insumo", back_populates="salidas")
+
+
+
+
+
+class Insumo(Base):
+    __tablename__ = "insumos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String, unique=True, nullable=False)
+    unidad = Column(String, nullable=False)
+    minimo = Column(Float, nullable=False)
+
+    entradas = relationship("EntradaInsumo", back_populates="insumo", cascade="all, delete")
+    salidas = relationship("SalidaInsumo", back_populates="insumo", cascade="all, delete")
+    movimientos = relationship("MovimientoInsumo", back_populates="insumo", cascade="all, delete")
+
+
+class MovimientoInsumo(Base):
+    __tablename__ = "movimientos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    insumo_id = Column(Integer, ForeignKey("insumos.id", ondelete="SET NULL"), nullable=True)
+    tipo = Column(String, nullable=False)
+    cantidad = Column(Float, nullable=True)
+    fecha = Column(DateTime, default=hora_colombia)
+
+    insumo = relationship("Insumo", back_populates="movimientos", passive_deletes=True)

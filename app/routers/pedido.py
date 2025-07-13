@@ -128,6 +128,43 @@ import json
 from ..routers.facturas import generar_factura_desde_pedido
 
 
+
+
+from ..config import MENU_FORMULARIO
+from ..errors import AppError
+from .. import models
+from sqlalchemy.orm import Session
+
+def aplicar_consumo_por_venta(producto_id: str, cantidad: int, db: Session):
+    from ..config import MENU_FORMULARIO  # usamos el menú original para ver el consumo real
+
+    for categoria in MENU_FORMULARIO.values():
+        for item in categoria:
+            if item["id"] == producto_id:
+                consumo = item.get("consumo", {})
+                print(f"⚙️ Consumo encontrado: {consumo}")
+                for insumo_nombre, cantidad_usada in consumo.items():
+                    insumo = db.query(models.Insumo).filter_by(nombre=insumo_nombre).first()
+                    if insumo:
+                        total = cantidad_usada * cantidad
+                        salida = models.SalidaInsumo(insumo_id=insumo.id, cantidad=total)
+                        db.add(salida)
+
+                        mov = models.MovimientoInsumo(
+                            insumo_id=insumo.id,
+                            tipo="salida",
+                            cantidad=total,
+                        )
+                        db.add(mov)
+                        print(f"✅ Movimiento registrado: {insumo_nombre} - {total}")
+                    else:
+                        print(f"⚠️ Insumo '{insumo_nombre}' no encontrado.")
+                db.commit()  # ← aquí lo pones, dentro de la función y con la variable `db` ya recibida
+                break
+
+
+
+
 @router.post("/atencion")
 async def submit_atencion(
     request: Request,
@@ -157,14 +194,32 @@ async def submit_atencion(
 
     try:
         factura = generar_factura_desde_pedido(pedido, db)
+
+        # 🧮 Aplicar consumo al inventario
+        for item in pedido.pedido:
+            producto_id = None
+            # Buscar el ID a partir del label (porque item.producto tiene el "label", no el "id")
+            for categoria in MENU_FORMULARIO.values():
+                for prod in categoria:
+                    if prod["nombre"] == item.producto:
+                        producto_id = prod["id"]
+                        break
+                if producto_id:
+                    break
+
+            if producto_id:
+                aplicar_consumo_por_venta(producto_id=producto_id, cantidad=item.cantidad, db=db)
+            else:
+                print(f"⚠️ No se encontró ID para producto '{item.producto}'")
+
         await nuevo_pedido(pedido)
+
     except Exception as e:
         request.session["pedido_data"] = pedido.model_dump()
         raise AppError("No se pudo procesar el pedido") from e
 
     request.session["success"] = "Pedido enviado a cocina y factura generada"
 
-  
     return render_template(
         request,
         "pedido_resumen.html",
@@ -176,6 +231,7 @@ async def submit_atencion(
             "domicilio": pedido.domicilio,
         },
     )
+
 
 
 @router.get("/resumen", response_class=HTMLResponse)

@@ -88,3 +88,49 @@ class FacturaResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+
+#Paulina
+class InsumoBase(BaseModel):
+    nombre: str
+    cantidad_minima: float
+    unidad_medida: str
+    # No incluimos cantidad_actual aquí porque se gestiona con movimientos
+    # Y tampoco 'activo', que es para la DB
+
+class InsumoCreate(InsumoBase):
+    # Hereda de InsumoBase. Podrías añadir campos específicos para la creación si los hubiera.
+    pass
+
+class InsumoUpdate(InsumoBase):
+    # Para actualizaciones, todos los campos son opcionales
+    nombre: str | None = None
+    cantidad_minima: float | None = None
+    unidad_medida: str | None = None
+    activo: bool | None = None
+
+class InsumoResponse(InsumoBase):
+    id: int
+    cantidad_actual: float
+    activo: bool
+
+    class Config:
+        from_attributes = True
+
+class MovimientoInventarioCreate(BaseModel):
+    insumo_id: int
+    tipo_movimiento: str # "entrada" o "salida"
+    cantidad: float
+    descripcion: str | None = None
+
+class MovimientoInventarioResponse(BaseModel):
+    id: int
+    insumo_id: int
+    tipo_movimiento: str
+    cantidad: float
+    fecha: datetime
+    descripcion: str | None = None
+
+    class Config:
+        from_attributes = True

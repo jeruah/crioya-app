@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>📆 Historial de movimientos - {{ fecha }}</h2>
+
+<form method="get" action="/historial" class="mb-4">
+    <label>Selecciona una fecha:</label>
+    <input type="date" name="fecha" class="form-control" required value="{{ fecha }}">
+    <button type="submit" class="btn btn-primary mt-2">Ver historial</button>
+</form>
+
+{% if movimientos %}
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Fecha y hora</th>
+            <th>Insumo</th>
+            <th>Tipo</th>
+            <th>Cantidad</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for mov in movimientos %}
+        <tr>
+            <td>{{ mov.fecha }}</td>
+            <td>
+  {% if mov.insumo %}
+    {{ mov.insumo.nombre }}
+  {% else %}
+    <em>Insumo eliminado (ID: {{ mov.insumo_id }})</em>
+  {% endif %}
+</td>
+
+            <td>{{ mov.tipo }}</td>
+            <td>{{ mov.cantidad or "—" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No hubo movimientos ese día.</p>
+{% endif %}
+{% endblock %}
