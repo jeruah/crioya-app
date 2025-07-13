@@ -124,4 +124,17 @@
     </table>
 </div>
 
+<script>
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', function (e) {
+            const btn = form.querySelector('button[type="submit"]');
+            setTimeout(() => {
+                if (!e.defaultPrevented && btn) {
+                    btn.disabled = true;
+                }
+            }, 800);
+        });
+    });
+</script>
+
 {% endblock %}
