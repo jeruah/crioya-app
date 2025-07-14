@@ -112,7 +112,7 @@ async def confirmar_cierre(
     db: Session = Depends(dependencies.get_db),
 ):
     colombia = pytz.timezone("America/Bogota")
-    ahora = datetime.now(colombia)
+    ahora = datetime.now(colombia).astimezone(pytz.utc)
 
     cierre = models.CierreCaja(
         fecha=ahora,
@@ -153,18 +153,20 @@ async def ver_cierres(
         .all()
     )
 
-    timezone = pytz.timezone("America/Bogota")
+    from_zone = pytz.utc
+    to_zone = pytz.timezone("America/Bogota")
+
     cierres_colombia = [
-    {
-        "fecha_local": cierre.fecha.astimezone(timezone),
-        "efectivo": cierre.efectivo,
-        "digital": cierre.digital,
-        "total_recibido": cierre.total_recibido,
-        "total_facturado": cierre.total_facturado,
-        "diferencia": cierre.diferencia,
-        "observaciones": cierre.observaciones,
-    }
-    for cierre in cierres
+        {
+            "fecha_local": cierre.fecha.replace(tzinfo=from_zone).astimezone(to_zone),
+            "efectivo": cierre.efectivo,
+            "digital": cierre.digital,
+            "total_recibido": cierre.total_recibido,
+            "total_facturado": cierre.total_facturado,
+            "diferencia": cierre.diferencia,
+            "observaciones": cierre.observaciones,
+        }
+        for cierre in cierres
     ]
 
     return render_template(
