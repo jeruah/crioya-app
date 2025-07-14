@@ -9,6 +9,10 @@ import pandas as pd
 import json
 from fpdf import FPDF
 import io
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from io import BytesIO
 
 router = APIRouter()
 
@@ -119,6 +123,12 @@ def informe_pdf(mes: str, db: Session = Depends(get_db)):
     for _, fila in df.iterrows():
         for p in fila["productos"]:
             ventas_por_tipo[p["producto"]] = ventas_por_tipo.get(p["producto"], 0) + p.get("subtotal", 0)
+
+    ventas_top = sorted(ventas_por_tipo.items(), key=lambda x: x[1], reverse=True)[:5]
+    inventario = _inventario_semanal(db, mes)
+    inventario_totales = [sum(d["entrada"] - d["salida"] for d in sem["datos"]) for sem in inventario]
+    ventas_semanales = _ventas_semanales(df, mes)
+
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", "B", 16)
@@ -128,10 +138,61 @@ def informe_pdf(mes: str, db: Session = Depends(get_db)):
     pdf.cell(0, 10, f"Total ventas: ${total_ventas:,.0f}", ln=True)
     pdf.cell(0, 10, f"Utilidad estimada: ${utilidad:,.0f}", ln=True)
     pdf.ln(5)
+
+    if ventas_top:
+        labels, values = zip(*ventas_top)
+        fig, ax = plt.subplots()
+        ax.bar(labels, values, color="skyblue")
+        ax.set_title("Ventas por tipo de producto")
+        ax.set_ylabel("Ventas $")
+        plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+        buf = BytesIO()
+        fig.tight_layout()
+        fig.savefig(buf, format="png")
+        plt.close(fig)
+        buf.seek(0)
+        pdf.image(buf, x=10, w=190)
+        pdf.ln(5)
+
+    if ventas_semanales:
+        labels = [f"Semana {v['semana']}" for v in ventas_semanales]
+        values = [v['total'] for v in ventas_semanales]
+        fig, ax = plt.subplots()
+        ax.plot(labels, values, marker='o')
+        ax.set_title("Ventas semana a semana")
+        ax.set_ylabel("Ventas")
+        plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+        buf = BytesIO()
+        fig.tight_layout()
+        fig.savefig(buf, format="png")
+        plt.close(fig)
+        buf.seek(0)
+        pdf.image(buf, x=10, w=190)
+        pdf.ln(5)
+
+    if inventario_totales:
+        labels = [f"Semana {i+1}" for i in range(len(inventario_totales))]
+        fig, ax = plt.subplots()
+        ax.bar(labels, inventario_totales, color="salmon")
+        ax.set_title("Estado del inventario")
+        ax.set_ylabel("Entradas - Salidas")
+        plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+        buf = BytesIO()
+        fig.tight_layout()
+        fig.savefig(buf, format="png")
+        plt.close(fig)
+        buf.seek(0)
+        pdf.image(buf, x=10, w=190)
+        pdf.ln(5)
+
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, "Ventas por tipo de producto", ln=True)
+    pdf.cell(0, 10, "Detalle de inventario", ln=True)
     pdf.set_font("Arial", size=11)
-    for k, v in ventas_por_tipo.items():
-        pdf.cell(0, 8, f"{k}: ${v:,.0f}", ln=True)
+    for idx, sem in enumerate(inventario, start=1):
+        pdf.cell(0, 8, f"Semana {idx} ({sem['inicio']} - {sem['fin']})", ln=True)
+        for item in sem["datos"]:
+            pdf.cell(0, 8, f"  - {item['nombre']}: entradas {item['entrada']} / salidas {item['salida']}", ln=True)
+        pdf.ln(2)
+
     pdf_bytes = pdf.output(dest="S").encode("latin-1")
     return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=informe_{mes}.pdf"})
