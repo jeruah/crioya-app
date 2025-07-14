@@ -13,6 +13,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from io import BytesIO
+import tempfile
 
 router = APIRouter()
 
@@ -139,6 +140,7 @@ def informe_pdf(mes: str, db: Session = Depends(get_db)):
     pdf.cell(0, 10, f"Utilidad estimada: ${utilidad:,.0f}", ln=True)
     pdf.ln(5)
 
+    # Gráfico de ventas por tipo de producto
     if ventas_top:
         labels, values = zip(*ventas_top)
         fig, ax = plt.subplots()
@@ -146,14 +148,14 @@ def informe_pdf(mes: str, db: Session = Depends(get_db)):
         ax.set_title("Ventas por tipo de producto")
         ax.set_ylabel("Ventas $")
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
-        buf = BytesIO()
         fig.tight_layout()
-        fig.savefig(buf, format="png")
-        plt.close(fig)
-        buf.seek(0)
-        pdf.image(buf, x=10, w=190)
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmpfile:
+            fig.savefig(tmpfile.name, format="png")
+            plt.close(fig)
+            pdf.image(tmpfile.name, x=10, w=190)
         pdf.ln(5)
 
+    # Gráfico de ventas semanales
     if ventas_semanales:
         labels = [f"Semana {v['semana']}" for v in ventas_semanales]
         values = [v['total'] for v in ventas_semanales]
@@ -162,14 +164,14 @@ def informe_pdf(mes: str, db: Session = Depends(get_db)):
         ax.set_title("Ventas semana a semana")
         ax.set_ylabel("Ventas")
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
-        buf = BytesIO()
         fig.tight_layout()
-        fig.savefig(buf, format="png")
-        plt.close(fig)
-        buf.seek(0)
-        pdf.image(buf, x=10, w=190)
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmpfile:
+            fig.savefig(tmpfile.name, format="png")
+            plt.close(fig)
+            pdf.image(tmpfile.name, x=10, w=190)
         pdf.ln(5)
 
+    # Gráfico de inventario
     if inventario_totales:
         labels = [f"Semana {i+1}" for i in range(len(inventario_totales))]
         fig, ax = plt.subplots()
@@ -177,12 +179,11 @@ def informe_pdf(mes: str, db: Session = Depends(get_db)):
         ax.set_title("Estado del inventario")
         ax.set_ylabel("Entradas - Salidas")
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
-        buf = BytesIO()
         fig.tight_layout()
-        fig.savefig(buf, format="png")
-        plt.close(fig)
-        buf.seek(0)
-        pdf.image(buf, x=10, w=190)
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmpfile:
+            fig.savefig(tmpfile.name, format="png")
+            plt.close(fig)
+            pdf.image(tmpfile.name, x=10, w=190)
         pdf.ln(5)
 
     pdf.set_font("Arial", "B", 12)
