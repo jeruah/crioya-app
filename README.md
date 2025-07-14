@@ -73,3 +73,10 @@ En Render selecciona **New Web Service**, elige el entorno *Docker* y conecta el
 La plataforma construirá la imagen usando el `Dockerfile` y expondrá el servicio en el puerto 8000.
 
 Ademas para el desplliegue en Render, debe cambiar la linea ws:// as wss:// en cocina.html
+
+## Database indexes
+
+Version 2 adds indexes to various timestamp columns (`facturas.fecha`, `cierres_caja.fecha`,
+`entradas_insumo.fecha`, `salidas_insumo.fecha` y `movimientos.fecha`).
+Si ya tienes las tablas creadas ejecuta manualmente `CREATE INDEX` para cada
+columna o recrea las tablas para aprovechar los nuevos índices.

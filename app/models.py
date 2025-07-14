@@ -41,7 +41,7 @@ class Factura(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     numero = Column(String, unique=True, nullable=False)  # Ej: FAC-20250622-001
-    fecha = Column(DateTime, default=hora_colombia)  
+    fecha = Column(DateTime, default=hora_colombia, index=True)
     cliente = Column(String, nullable=False)
     productos = Column(Text, nullable=False)  # JSON serializado con productos
     total = Column(Float, nullable=False)
@@ -52,7 +52,7 @@ class CierreCaja(Base):
     __tablename__ = "cierres_caja"
 
     id = Column(Integer, primary_key=True, index=True)
-    fecha = Column(DateTime, default=hora_colombia)
+    fecha = Column(DateTime, default=hora_colombia, index=True)
     efectivo = Column(Float, nullable=False)
     digital = Column(Float, nullable=False)
     total_recibido = Column(Float, nullable=False)
@@ -68,7 +68,7 @@ class EntradaInsumo(Base):
     id = Column(Integer, primary_key=True)
     insumo_id = Column(Integer, ForeignKey("insumos.id"))
     cantidad = Column(Float, nullable=False)
-    fecha = Column(DateTime, default=datetime.now)
+    fecha = Column(DateTime, default=datetime.now, index=True)
 
     insumo = relationship("Insumo", back_populates="entradas")
 
@@ -77,7 +77,7 @@ class SalidaInsumo(Base):
     id = Column(Integer, primary_key=True)
     insumo_id = Column(Integer, ForeignKey("insumos.id"))
     cantidad = Column(Float, nullable=False)
-    fecha = Column(DateTime, default=datetime.now)
+    fecha = Column(DateTime, default=datetime.now, index=True)
 
     insumo = relationship("Insumo", back_populates="salidas")
 
@@ -105,6 +105,6 @@ class MovimientoInsumo(Base):
     insumo_id = Column(Integer, ForeignKey("insumos.id", ondelete="SET NULL"), nullable=True)
     tipo = Column(String, nullable=False)
     cantidad = Column(Float, nullable=True)
-    fecha = Column(DateTime, default=hora_colombia)
+    fecha = Column(DateTime, default=hora_colombia, index=True)
 
     insumo = relationship("Insumo", back_populates="movimientos", passive_deletes=True)

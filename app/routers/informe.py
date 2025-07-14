@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse, StreamingResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from ..dependencies import get_db
 from ..config import render_template
 from .. import models
@@ -20,15 +20,20 @@ def _facturas_mes(db: Session, mes: str) -> pd.DataFrame:
         fin = inicio.replace(year=inicio.year + 1, month=1)
     else:
         fin = inicio.replace(month=inicio.month + 1)
-    facturas = db.query(models.Factura).filter(models.Factura.fecha >= inicio, models.Factura.fecha < fin).all()
-    data = []
-    for f in facturas:
-        data.append({
-            "fecha": f.fecha,
-            "productos": json.loads(f.productos),
-            "total": f.total
-        })
-    df = pd.DataFrame(data)
+    rows = (
+        db.query(models.Factura.fecha, models.Factura.productos, models.Factura.total)
+        .filter(models.Factura.fecha >= inicio, models.Factura.fecha < fin)
+        .all()
+    )
+    data = [
+        {
+            "fecha": r.fecha,
+            "productos": json.loads(r.productos),
+            "total": r.total,
+        }
+        for r in rows
+    ]
+    df = pd.DataFrame(data, columns=["fecha", "productos", "total"])
     return df
 
 
@@ -41,10 +46,15 @@ def _inventario_semanal(db: Session, mes: str):
         fin = inicio.replace(month=inicio.month + 1)
     semanas = []
     actual = inicio
+    insumos = (
+        db.query(models.Insumo)
+        .options(selectinload(models.Insumo.entradas), selectinload(models.Insumo.salidas))
+        .all()
+    )
     while actual < fin:
         siguiente = actual + timedelta(days=7)
         datos = []
-        for ins in db.query(models.Insumo).all():
+        for ins in insumos:
             entradas = sum(e.cantidad for e in ins.entradas if actual <= e.fecha < siguiente)
             salidas = sum(s.cantidad for s in ins.salidas if actual <= s.fecha < siguiente)
             datos.append({"nombre": ins.nombre, "entrada": entradas, "salida": salidas})
