@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Estimación de Gastos Semanales{% endblock %}
+
+{% block content %}
+  <h2 class="mb-4 text-primary">📊 Estimación de Gastos - Semana {{ desde.strftime('%W') }}</h2>
+
+  <p>Desde: <strong>{{ desde }}</strong> — Hasta: <strong>{{ hasta }}</strong></p>
+<form method="get" action="/inventario/estimado_gasto" class="mb-4">
+    <label for="desde">Desde:</label>
+    <input type="date" id="desde" name="desde" value="{{ desde.strftime('%Y-%m-%d') }}">
+
+    <label for="hasta">Hasta:</label>
+    <input type="date" id="hasta" name="hasta" value="{{ hasta.strftime('%Y-%m-%d') }}">
+
+    <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+</form>
+
+<div class="table-responsive">
+    <table class="table table-bordered table-hover table-striped">
+      <thead class="table-light text-center">
+        <tr>
+          <th>Insumo</th>
+          <th>Cant. estimada</th>
+          <th>Gasto estimado (COP)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for insumo, qty in detalle_por_insumo.items() %}
+        <tr class="text-center">
+          <td class="text-start">{{ insumo }}</td>
+          <td>{{ qty }}</td>
+          <td>${{ "{:,.0f}".format(gasto_por_insumo[insumo]) }}</td>
+        </tr>
+        {% endfor %}
+        <tr class="fw-bold text-center table-warning">
+          <td colspan="2" class="text-end">Total general:</td>
+          <td>${{ "{:,.0f}".format(total_general) }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <a href="/inventario" class="btn btn-secondary mt-3">
+    ← Volver a Inventario
+  </a>
+{% endblock %}
