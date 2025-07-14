@@ -53,6 +53,27 @@ def _inventario_semanal(db: Session, mes: str):
     return semanas
 
 
+def _ventas_semanales(df: pd.DataFrame, mes: str):
+    """Totales de ventas por semana dentro del mes."""
+    if df.empty:
+        return []
+    inicio = datetime.strptime(mes + "-01", "%Y-%m-%d")
+    if inicio.month == 12:
+        fin = inicio.replace(year=inicio.year + 1, month=1)
+    else:
+        fin = inicio.replace(month=inicio.month + 1)
+    semanas = []
+    actual = inicio
+    index = 1
+    while actual < fin:
+        siguiente = actual + timedelta(days=7)
+        total = df[(df["fecha"] >= actual) & (df["fecha"] < siguiente)]["total"].sum()
+        semanas.append({"semana": index, "total": float(total)})
+        actual = siguiente
+        index += 1
+    return semanas
+
+
 @router.get("/informe", response_class=HTMLResponse)
 async def informe_financiero(request: Request, mes: str = None, db: Session = Depends(get_db)):
     mes = mes or datetime.now().strftime("%Y-%m")
@@ -63,13 +84,19 @@ async def informe_financiero(request: Request, mes: str = None, db: Session = De
     for _, fila in df.iterrows():
         for p in fila["productos"]:
             ventas_por_tipo[p["producto"]] = ventas_por_tipo.get(p["producto"], 0) + p.get("subtotal", 0)
+    ventas_top = sorted(ventas_por_tipo.items(), key=lambda x: x[1], reverse=True)[:5]
     inventario = _inventario_semanal(db, mes)
+    inventario_totales = [sum(d["entrada"] - d["salida"] for d in sem["datos"]) for sem in inventario]
+    ventas_semanales = _ventas_semanales(df, mes)
     return render_template(request, "informe.html", {
         "mes": mes,
         "total_ventas": total_ventas,
         "utilidad": utilidad,
         "ventas_por_tipo": ventas_por_tipo,
-        "inventario": inventario
+        "ventas_top": ventas_top,
+        "inventario": inventario,
+        "inventario_totales": inventario_totales,
+        "ventas_semanales": ventas_semanales
     })
 
 

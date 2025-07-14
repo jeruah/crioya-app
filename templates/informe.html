@@ -22,14 +22,18 @@
 </div>
 <div class="mb-4">
   <h4>Ventas por tipo de producto</h4>
-  <ul>
-    {% for nombre, valor in ventas_por_tipo.items() %}
-      <li>{{ nombre }}: ${{ '{:,.0f}'.format(valor) }}</li>
-    {% endfor %}
-  </ul>
+  <canvas id="productosChart" height="100"></canvas>
+</div>
+<div class="mb-4">
+  <h4>Ventas semana a semana</h4>
+  <canvas id="ventasChart" height="100"></canvas>
 </div>
 <div class="mb-4">
   <h4>Estado del inventario semana a semana</h4>
+  <canvas id="inventarioChart" height="100"></canvas>
+</div>
+<div class="mb-4">
+  <h4>Detalle de inventario</h4>
   {% for sem in inventario %}
     <h6>Semana {{ loop.index }} ({{ sem.inicio }} - {{ sem.fin }})</h6>
     <ul>
@@ -39,4 +43,51 @@
     </ul>
   {% endfor %}
 </div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const ventasTop = {{ ventas_top | tojson }};
+  const ventasSem = {{ ventas_semanales | tojson }};
+  const invTotales = {{ inventario_totales | tojson }};
+
+  const ctxProductos = document.getElementById('productosChart');
+  new Chart(ctxProductos, {
+    type: 'bar',
+    data: {
+      labels: ventasTop.map(v => v[0]),
+      datasets: [{
+        label: 'Ventas $',
+        data: ventasTop.map(v => v[1]),
+        backgroundColor: 'rgba(54, 162, 235, 0.5)'
+      }]
+    }
+  });
+
+  const ctxVentas = document.getElementById('ventasChart');
+  new Chart(ctxVentas, {
+    type: 'line',
+    data: {
+      labels: ventasSem.map(v => 'Semana ' + v.semana),
+      datasets: [{
+        label: 'Total ventas',
+        data: ventasSem.map(v => v.total),
+        fill: false,
+        borderColor: 'rgba(75, 192, 192, 1)',
+        tension: 0.1
+      }]
+    }
+  });
+
+  const ctxInventario = document.getElementById('inventarioChart');
+  new Chart(ctxInventario, {
+    type: 'bar',
+    data: {
+      labels: invTotales.map((_, i) => 'Semana ' + (i + 1)),
+      datasets: [{
+        label: 'Entradas - Salidas',
+        data: invTotales,
+        backgroundColor: 'rgba(255, 99, 132, 0.5)'
+      }]
+    }
+  });
+</script>
 {% endblock %}
