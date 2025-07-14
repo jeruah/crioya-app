@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 import logging
 import os
 from app.routers import pages, pedido, clientes, facturas
+from app.routers import informe
 from .database import create_db_and_tables
 from .errors import AppError
 from . import models
@@ -47,6 +48,7 @@ app.include_router(pedido.router)
 app.include_router(clientes.router)
 app.include_router(facturas.router)
 app.include_router(inventario.router)
+app.include_router(informe.router)
 
  
 

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Informe Financiero{% endblock %}
+{% block content %}
+<h2 class="mb-4">Informe Financiero - {{ mes }}</h2>
+<div class="mb-3">
+  <form method="get" action="/informe" class="row g-3">
+    <div class="col-auto">
+      <input type="month" name="mes" value="{{ mes }}" class="form-control">
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-primary">Generar informe financiero</button>
+    </div>
+    <div class="col-auto">
+      <a href="/informe/pdf?mes={{ mes }}" class="btn btn-secondary">Exportar informe</a>
+    </div>
+  </form>
+</div>
+<div class="mb-4">
+  <h4>Resumen de ventas</h4>
+  <p>Total ventas: ${{ '{:,.0f}'.format(total_ventas) }}</p>
+  <p>Utilidad estimada: ${{ '{:,.0f}'.format(utilidad) }}</p>
+</div>
+<div class="mb-4">
+  <h4>Ventas por tipo de producto</h4>
+  <ul>
+    {% for nombre, valor in ventas_por_tipo.items() %}
+      <li>{{ nombre }}: ${{ '{:,.0f}'.format(valor) }}</li>
+    {% endfor %}
+  </ul>
+</div>
+<div class="mb-4">
+  <h4>Estado del inventario semana a semana</h4>
+  {% for sem in inventario %}
+    <h6>Semana {{ loop.index }} ({{ sem.inicio }} - {{ sem.fin }})</h6>
+    <ul>
+      {% for item in sem.datos %}
+        <li>{{ item.nombre }}: entradas {{ item.entrada }} / salidas {{ item.salida }}</li>
+      {% endfor %}
+    </ul>
+  {% endfor %}
+</div>
+{% endblock %}
