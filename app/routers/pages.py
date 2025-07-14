@@ -38,13 +38,7 @@ async def facturas(request: Request):
     )
 
 
-@router.get("/informe", response_class=HTMLResponse)
-async def informe(request: Request):
-    return render_template(
-        request,
-        "placeholder.html",
-        {"titulo": "Informe Financiero"},
-    )
+
 
 @router.get("/cierre", response_class=HTMLResponse)
 async def cierre_caja_form(request: Request):
