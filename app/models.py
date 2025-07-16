@@ -66,7 +66,7 @@ class CierreCaja(Base):
 class EntradaInsumo(Base):
     __tablename__ = "entradas_insumo"
     id = Column(Integer, primary_key=True)
-    insumo_id = Column(Integer, ForeignKey("insumos.id"))
+    insumo_id = Column(Integer, ForeignKey("insumos.id", ondelete="CASCADE"))
     cantidad = Column(Float, nullable=False)
     fecha = Column(DateTime, default=datetime.now, index=True)
 
@@ -75,7 +75,7 @@ class EntradaInsumo(Base):
 class SalidaInsumo(Base):
     __tablename__ = "salidas_insumo"
     id = Column(Integer, primary_key=True)
-    insumo_id = Column(Integer, ForeignKey("insumos.id"))
+    insumo_id = Column(Integer, ForeignKey("insumos.id", ondelete="CASCADE"))
     cantidad = Column(Float, nullable=False)
     fecha = Column(DateTime, default=datetime.now, index=True)
 
@@ -93,8 +93,18 @@ class Insumo(Base):
     unidad = Column(String, nullable=False)
     minimo = Column(Float, nullable=False)
 
-    entradas = relationship("EntradaInsumo", back_populates="insumo", cascade="all, delete")
-    salidas = relationship("SalidaInsumo", back_populates="insumo", cascade="all, delete")
+    entradas = relationship(
+        "EntradaInsumo",
+        back_populates="insumo",
+        cascade="all, delete",
+        passive_deletes=True,
+    )
+    salidas = relationship(
+        "SalidaInsumo",
+        back_populates="insumo",
+        cascade="all, delete",
+        passive_deletes=True,
+    )
     movimientos = relationship("MovimientoInsumo", back_populates="insumo", cascade="all, delete")
 
 
