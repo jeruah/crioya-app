@@ -11,6 +11,7 @@ from datetime import date
 from datetime import datetime
 import pytz
 from typing import Optional
+from sqlalchemy import and_
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -19,7 +20,7 @@ templates = Jinja2Templates(directory="templates")
 INSUMOS_PREDEFINIDOS = [
     {"nombre": "Papas Criolla", "unidad": "kg", "minimo": 100, "precio_unitario": 4800},
     {"nombre": "Papa Normal", "unidad": "kg", "minimo": 100, "precio_unitario": 1915},
-    {"nombre": "Deditos De Queso", "unidad": "kg", "minimo": 40, "precio_unitario": 20000},
+    {"nombre": "Deditos De Queso", "unidad": "kg", "minimo": 40, "precio_unitario": 24000},
     {"nombre": "Yucas", "unidad": "kg", "minimo": 50, "precio_unitario": 1970},
     {"nombre": "Salchicha Ranchera", "unidad": "kg", "minimo": 4, "precio_unitario": 8000},
     {"nombre": "Costillas", "unidad": "kg", "minimo": 40, "precio_unitario": 18000},
@@ -154,13 +155,12 @@ def eliminar(insumo_id: int, db: Session = Depends(get_db)):
     mov = models.MovimientoInsumo(insumo_id=insumo_id, tipo="eliminacion")
     db.add(mov)
 
-    db.query(models.Insumo).filter_by(id=insumo_id).delete()
+    insumo = db.query(models.Insumo).filter_by(id=insumo_id).first()
+    if not insumo:
+        raise HTTPException(status_code=404, detail="Insumo no encontrado")
+    db.delete(insumo)
     db.commit()
     return RedirectResponse("/inventario", status_code=303)
-
-
-from sqlalchemy import and_, func
-
 
 @router.get("/historial")
 def ver_historial(request: Request, fecha: date = Query(...), db: Session = Depends(get_db)):

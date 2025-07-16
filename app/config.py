@@ -27,9 +27,9 @@ STAFF_TOKEN = os.getenv("STAFF_TOKEN", "changeme")
 MENU_FORMULARIO = {
     "Entradas": [
         {"nombre": "Deditos de queso x5", "id": "deditos_queso", "precio": 8000, "consumo" :{
-            "Deditos De Queso": 0.7 
+            "Deditos De Queso": 0.125
         }},
-        {"nombre": "Croquetas de yuca", "id": "croquetas_yuca", "precio": 6000, "consumo" :{"Yucas": 0.7}},
+        {"nombre": "Croquetas de yuca", "id": "croquetas_yuca", "precio": 6000, "consumo" :{"Yucas": 0.139}},
         {"nombre": "Criollas crocantes", "id": "criollas_crocantes", "precio": 7000, "consumo": {
             "Papas Criolla": 0.60
         }},
@@ -41,7 +41,7 @@ MENU_FORMULARIO = {
     "Especial familiar": [
         {"nombre": "Especial familiar", "id": "especial_familiar", "precio": 28000, "consumo":{"Papa Normal": 0.9,
             "Papas Criolla": 0.90,
-            "Chicharron": 0.5,
+            "Chicharron": 0.3,
             "Costillas": 0.5,
             "Pollo Desmechado": 0.2,
             "Pico De Gallo": 0.2,
@@ -52,7 +52,7 @@ MENU_FORMULARIO = {
             "Papas Criolla": 0.90,
             "Carne Desmechada": 0.3,
             "Pollo Desmechado": 0.2,
-            "Tocineta": 0.2,
+            "Tocineta": 0.1,
             "Pico De Gallo": 0.2,
             "Queso": 0.2}},
     ],
@@ -60,7 +60,7 @@ MENU_FORMULARIO = {
         {"nombre": "Crioya familiar", "id": "crioya_familiar", "precio": 35000, "consumo":{"Papa Normal": 0.90,
             "Papas Criolla": 0.90,
             "Costillas": 0.5,
-            "Chicharron": 0.5,
+            "Chicharron": 0.3,
             "Tocineta": 0.2,
             "Platano": 0.07,
             "Queso": 0.2}},
