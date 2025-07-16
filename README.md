@@ -80,3 +80,18 @@ Version 2 adds indexes to various timestamp columns (`facturas.fecha`, `cierres_
 `entradas_insumo.fecha`, `salidas_insumo.fecha` y `movimientos.fecha`).
 Si ya tienes las tablas creadas ejecuta manualmente `CREATE INDEX` para cada
 columna o recrea las tablas para aprovechar los nuevos índices.
+
+## Foreign key cascades
+
+Versión 3 cambia las relaciones de `entradas_insumo` y `salidas_insumo` para
+eliminar automáticamente los registros asociados cuando un `insumo` se borra.
+Debes recrear las tablas para que los `FOREIGN KEY` tengan `ON DELETE CASCADE`.
+
+Ejecuta:
+
+```bash
+python scripts/recreate_tables.py
+```
+
+Esto eliminará todas las tablas y las volverá a crear con las claves
+actualizadas.
